@@ -1,0 +1,40 @@
+# depslib dependency file v1.0
+1364307429 source:/home/teto/lig_daemon/main.c
+	<stdio.h>
+	<stdlib.h>
+	<errno.h>
+	<unistd.h>
+	<poll.h>
+	<string.h>
+	<fcntl.h>
+	<sys/types.h>
+	<sys/stat.h>
+	<sys/socket.h>
+	<sys/types.h>
+	<signal.h>
+	<linux/genetlink.h>
+
+1364403161 source:/home/teto/lig_daemon/lig_daemon.c
+	<netlink/netlink.h>
+	<netlink/genl/genl.h>
+	<stdlib.h>
+	<stdio.h>
+	"../lig_module/lig_module.h"
+
+1367096378 /home/teto/lig_module/lig_module.h
+
+1367452365 source:/home/teto/lig_daemon_nl/lig_daemon.c
+	<netlink/netlink.h>
+	<netlink/genl/genl.h>
+	<netlink/genl/ctrl.h>
+	<netlink/genl/mngt.h>
+	<linux/types.h>
+	<libexplain/execvp.h>
+	<stdlib.h>
+	<stdio.h>
+	<sys/socket.h>
+	<netinet/in.h>
+	<arpa/inet.h>
+	<unistd.h>
+	"../lig_module/lig_module.h"
+

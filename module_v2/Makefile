@@ -7,5 +7,6 @@ all:
 install:
     $(MAKE) -C $(KDIR) M=$(PWD) modules_install
 
+cleanall: clean
 clean:
     $(MAKE) -C $(KDIR) M=$(PWD) clean

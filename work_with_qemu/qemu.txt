@@ -1,0 +1,26 @@
+on peut lancer un kernel dans Qemu sans hdd cf http://blog.vmsplice.net/2011/02/near-instant-kernel-development-cycle.html
+
+Pour créer le initramfs (mettre les modules à charger dedans ?)
+sudo update-initramfs -c -b ~/mptcp -k 3.5.0mptcpbymatt+
+
+On peut utiliser fdisk pour analyser le fichier image de qemu (raw en tout cas)
+
+Pour utiliser un noyau de l'hote dans la VM, model e1000 car compilé dans le noyau
+qemu -m 1G -hda ~/mptcp/ubuntuimage -kernel ~/mptcpkernel/arch/x86_64/boot/bzImage -append "root=/dev/sda1 rw rootfstype=ext4" -net nic,model=e1000 -net tap,ifname=tap0,script=no,downscript=no
+
+pourmonter le systeme de fichier hote <tag> puis <pointdeMontage>)
+mount -t 9p -o trans=virtio,version=9p2000.L test $HOME/shareddir
+
+
+warnings
+http://www.linuxquestions.org/questions/slackware-14/couldnt-mount-because-of-unsupported-optional-features-240-a-843675/
+
+
+#command pour logger le boot linux dans un fichier (remplacer file:"" par file:CON
+qemu -m 1G -hda ~/mptcp/ubuntuimage -kernel ~/mptcp0.86/arch/x86_64/boot/bzImage -append "root=/dev/sda1 console=ttyS0,115200" -serial file:"/tmp/qemulog.txt"
+
+
+
+
+How do you send special key strokes to the guest console?
+    If trying to press "Ctrl+Alt+F1" to switch virtual consoles in a guest, it is very likely that the local X server will intercept the keystroke and switch consoles on the host machine instead. To work around this problem, the virtual console window has the idea of ‘sticky’ keys. If you press a modifier key 3 times in a row, it will stick on until the next non-modifier key is released. So to send "Ctrl+Alt+F1" to the guest, one can use the sequence "Ctrl Ctrl Ctrl Alt+F1"

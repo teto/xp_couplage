@@ -1,0 +1,14 @@
+Working with 9p
+
+On peut voir la liste des tags ici
+/sys/bus/virtio/drivers/9pnet_virtio/virtio<n>/mount_tag files
+
+
+Options du noyau pr l'utiliser avec Qemu (pas dans l'ordre)
+NET_9P_VIRTIO
+NET_9P
+VIRTIO_PCI
+VIRTIO
+
+
+

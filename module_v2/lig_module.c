@@ -22,20 +22,12 @@
     } while (0);
 
 
+static struct mptcp_subflow_manager subflow_mgr;
 
-static mptcp_pm_module *module_ops = 0;
 
-
-//static int entier;
-// static char destinationIP[MAX_STRING];
-
-// TODO retrieve it automatically ?
-// by default my attributed EID
 static char hostEID[INET_ADDRSTRLEN] = "153.16.49.112";
 // static char resolverEID[INET_ADDRSTRLEN] = "153.16.49.112";
 
-//! Path towards the lig program
-//static char programPath[100];
 
 static struct genl_multicast_group lig_multicast_group =
 {
@@ -46,12 +38,6 @@ static struct genl_multicast_group lig_multicast_group =
 static struct timer_list my_timer;
 
 
-// u8
-static u32 number_of_local_rlocs = 1;
-
-// sock
-//static struct sock *nl_sk = NULL;
-
 // module_param_string(destinationIP, destinationIP, sizeof(destinationIP), 0644);
 // module_param_string(programPath, programPath, sizeof(programPath), 0644);
 
@@ -60,8 +46,8 @@ static u32 number_of_local_rlocs = 1;
 // MODULE_PARM_DESC(programPath, "Path towards the userspace lig program this module calls ?");
 
 
-
-MODULE_DESCRIPTION("lig_module");
+//MODULE_OWNER()
+MODULE_DESCRIPTION("mptcp_manager");
 MODULE_AUTHOR("Matthieu Coudron");
 MODULE_LICENSE("GPL");
 
@@ -507,7 +493,7 @@ static int __init init_lig_module(void)
 
     lig_debug("LIG MODULE initialization\n");
 
-    
+
 
 
 

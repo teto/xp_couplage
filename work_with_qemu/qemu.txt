@@ -1,3 +1,17 @@
+réeau
+subflows should act on a non null mask to detect neww addresses or removal
+Pour supprimer un device tap
+sudo ip tuntap del dev tap0 mode tap
+sudo ip tuntap add dev tap0 mode tap user teto (or $(whoami)
+subflows should act on a non null mask to detect neww addresses or removal
+
+
+CTRL+ALT+1/2 puis sendkey ctrl-alt-f1 ou sinon CTRLx3 + ALT +F1
+
+COmment faire son initramfs
+les hooks sont dispos dans /usr/share/initramfs-tools/hooks
+
+
 on peut lancer un kernel dans Qemu sans hdd cf http://blog.vmsplice.net/2011/02/near-instant-kernel-development-cycle.html
 
 Pour créer le initramfs (mettre les modules à charger dedans ?)

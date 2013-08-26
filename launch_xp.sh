@@ -32,6 +32,16 @@ echo "q) quit"
 }
 
 
+# @param 
+function check_server_is_reachable()
+{
+	
+	wget  --timeout 3 -O -  $url > /dev/null
+	result="$?"
+
+}
+
+
 # @param xp_name
 # @param command to launch
 function launch_xp()
@@ -41,6 +51,10 @@ function launch_xp()
 
 	echo "Please enter the test name:"
 	read xp_name
+
+	# prevents launching test if server not reachable (which need to be removed )
+	echo "Checking server is reachable"
+
 	echo "Launching test '$xp_name'"
 	cmdToExecute="$cmdToExecute $xp_name"
 	for i in $(seq 1 $TIMES_TO_REPEAT_EACH_XP); do 

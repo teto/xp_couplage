@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+# todo to remove
 
 if [ $# -ne 1 ]; then
 	echo "Usage: $0 <commandToLaunch>"

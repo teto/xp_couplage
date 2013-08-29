@@ -1,6 +1,8 @@
 #obj-y += lig_module.o
 obj-m += lig_module.o
 
+lig_module.ko: all
+
 all:
     $(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
 

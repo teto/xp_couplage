@@ -1,0 +1,24 @@
+THis folder contains nearly everything necessary to reproduce the experience described in this paper ...
+
+
+Here are the additional requirements:
+- you will need to install a custom version of lispmob. 
+Available here:
+
+-You will need to install python 2 and iperf and webfs.
+
+
+
+
+
+
+
+You first need to properly configure the config.ini file.
+
+Then launch setup.py
+
+
+
+If you have any questions feel free to send an email at matthieu.coudron at lip6 dot fr .
+
+

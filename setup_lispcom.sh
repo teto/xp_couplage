@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO to remove
+
 debugFolder="/sys/kernel/debug/tracing"
 #ppwd="$(pwd)"
 moduleFolder="/home/teto/lig_module"

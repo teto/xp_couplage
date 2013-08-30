@@ -50,16 +50,15 @@ class Program:
 #
 # Allow control over lispmob
 # 
-class LISPdaemon:
+class LISPdaemon(Program):
 
 
 	def __init__(self, src_dir, binary ):
-		super.__init__(binary, False)
+		super().__init__(binary, False)
 		if not os.path.isdir(src_dir):
 			raise Exception( src_dir + "is not a directory");
 
 		self.src = src_dir
-		self.config = config_file
 		
 
 	def build(self):

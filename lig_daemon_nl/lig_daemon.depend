@@ -38,3 +38,20 @@
 	<unistd.h>
 	"../lig_module/lig_module.h"
 
+1370817881 source:/home/teto/xp_couplage/lig_daemon_nl/lig_daemon.c
+	<netlink/netlink.h>
+	<netlink/genl/genl.h>
+	<netlink/genl/ctrl.h>
+	<netlink/genl/mngt.h>
+	<linux/types.h>
+	<libexplain/execvp.h>
+	<stdlib.h>
+	<stdio.h>
+	<sys/socket.h>
+	<netinet/in.h>
+	<arpa/inet.h>
+	<unistd.h>
+	"../lig_module/lig_module.h"
+
+1370817802 /home/teto/xp_couplage/lig_module/lig_module.h
+

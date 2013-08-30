@@ -30,6 +30,7 @@ class KernelSource:
 
 
 	def install_modules( self ):
+		
 		return subprocess.check_call("sudo make -C "+ self.src_dir + " modules_install ", shell=True)
 		#return False
 
@@ -53,6 +54,7 @@ class InstalledModule:
 	# fullpath
 	def __init__(self, name):
 		self.name = name;
+		# self.src  = src_dir
 	
 	def load(self):
 		return subprocess.check_call("sudo modprobe " + self.name, shell=True)
@@ -63,9 +65,6 @@ class InstalledModule:
 
 	def is_loaded(self):
 		output = subprocess.check_output("lsmod", shell=True).decode();
-
-		#print (output)
-		#return ( output.find (  os.name.basename ( self.name) ) != -1)
 		return  os.path.basename ( self.name) in  output
 
 	def unload(self):

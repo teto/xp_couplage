@@ -4,21 +4,27 @@ THis folder contains nearly everything necessary to reproduce the experience des
 Here are the additional requirements:
 - you will need to install a custom version of lispmob. 
 Available here:
-
--You will need to install python 2 and iperf and webfs.
-
-
-
-
+-You will need to install python 2 and 3  and iperf and webfs.
+-an ssh server running on both server
+-libnl installed
+-script folder should be in the PATH (transform into need to export a var in bash called $LISP_MPTCP_EXP_FOLDER (escape the $ in ssh command) )
 
 
 
-You first need to properly configure the config.ini file.
+You first need to properly configure the *.ini files.
+
 
 Then launch setup.py
 
-
+ sudo pip3 install pyro4
 
 If you have any questions feel free to send an email at matthieu.coudron at lip6 dot fr .
 
 
+TODO:
+-allow for different level of logging ?
+-TODO ability to install every (via nsyslog ) ?
+-should be available to load pyro4 from remote (ssh)
+-shoulb be able to pass graph to trace (by referencing previous tests ? or datasets ?)
+
+python3 -m Pyro4.naming

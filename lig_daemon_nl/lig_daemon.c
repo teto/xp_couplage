@@ -10,10 +10,6 @@ Libraries needed:
 
 **/
 
-
-//#include <netlink/socket.h>
-//#include <netlink/netlink.h>
-//#include <linux/genetlink.h>
 #include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
@@ -349,7 +345,12 @@ genlmsg_attrdataReturn pointer to message attributes.
 
 
 
-int main()
+/**
+TODO we should parse the command line to be able to override the number of subflows to return
+
+**/
+
+int main(int argc, char **argv)
 {
 
 
@@ -365,6 +366,8 @@ int main()
     sk = 0;
 
     printf("Starting LIG DAEMON\n");
+
+
 
     sk = nl_socket_alloc();
 

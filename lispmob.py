@@ -2,7 +2,9 @@
 
 import subprocess
 import os
+import logging
 
+logger = logging.getLogger( __name__ )
 
 #
 # TODO to finish
@@ -38,7 +40,7 @@ class Program:
 	def stop(self):
 		# we don't care if it fails
 		if not self.is_running():
-			print ("Program "+ self.bin +" not running")
+			logger.info ("Program '"+ self.bin +"'' not running")
 			return True
 
 		return subprocess.check_call( self.sudo + "killall -9 "+ self.get_bin_name() ,shell=True)
@@ -62,7 +64,7 @@ class LISPdaemon(Program):
 		
 
 	def build(self):
-		print("Building daemon")
+		logging.info("Building daemon")
 		# subprocess.check_call("make -C "+ self.src +" all platform=router",shell=True);
 		subprocess.check_call( self.src +"/build.sh", shell=True);
 

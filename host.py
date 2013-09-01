@@ -6,11 +6,16 @@ import configparser
 import argparse
 import sys
 import os
-import inspect
+# import inspect
 import subprocess
 import linux
+import Pyro4
 
-#
+
+class Interface:
+    def __init__(self):
+        pass
+
 # en fait pourl'instant cette commande on s'en moque
 # we should be able to add ability to the host 
 # every ability should be self documented 
@@ -20,8 +25,8 @@ class Host:
         # self.address = address
         self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
 
-        # set variable MainDir in config file       
-        self.config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__))  )
+        # set variable MainDir in config file
+        self.config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__) ))
 
         # first need to compile module
         self.config.read(configFile)
@@ -34,9 +39,30 @@ class Host:
         self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
         #self.port 
 
+    def getEID(self):
+        return self.config["network"]["eid"]
+
+    def getIp(self):
+        return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
+
+    def getInterfaces(self):
+        pass
+
+
+    """ ping timeouts after 3 sec"""
+    def ping(self, remotehost):
+        return (os.system("ping -w 3 "+ remotehost ) == 0)
+
     # for testing purposes
     def echo(self,msg):
         print(msg)
+
+
+    def mptcp_set_state(self,state):
+        return mptcp.MPTCP.set_global_state(state)
+
+    # should check if it's in its abilities
+    # def __call__():
 
     def lispmob(self,action):
         return getattr(self.router,action)();
@@ -65,10 +91,10 @@ class Host:
 
         
         if action == "compile":
-            kernel = linux.KernelSource( config['kernel']['src']);
+            kernel = linux.KernelSource( self.config['kernel']['src']);
         
-            kernel.compile_module( config['module']['src'])
-            kernel.install_module( config['module']['src'])
+            kernel.compile_module( self.config['module']['src'])
+            kernel.install_module( self.config['module']['src'])
         elif action == "load":
             self.mod.load()
         else:
@@ -128,7 +154,7 @@ if __name__ == '__main__':
         choices=('build','start','stop','is_running') 
         # choices=lisp_choices
         )
-    lispmob_parser.set_defaults(func=handle_lispmob)
+    # lispmob_parser.set_defaults(func=handle_lispmob)
 
 
     # parse arguments

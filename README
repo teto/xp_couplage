@@ -2,7 +2,12 @@ THis folder contains nearly everything necessary to reproduce the experience des
 
 
 Here are the additional requirements:
-- you will need to install a custom version of lispmob. 
+- you will need to install a custom version of lispmob.- python3 along with several of its modules, 
+-minupnpc and its python binding ( 
+make pythonmodule3
+sudo make installpythonmodule3)
+-libnl3 and its python binding (trunk version, experimental)
+
 Available here:
 -You will need to install python 2 and 3  and iperf and webfs.
 -an ssh server running on both server
@@ -17,6 +22,8 @@ You first need to properly configure the *.ini files.
 Then launch setup.py
 
  sudo pip3 install pyro4
+
+Pyro_server should be launched by hand.
 
 If you have any questions feel free to send an email at matthieu.coudron at lip6 dot fr .
 

@@ -43,8 +43,12 @@ echo -e "=================================="
 # for url in $list_urls; do
 for no in $( seq 1 $NBOFFILES);do
 
+	# be careful here since bash also ha sits own "time" program
 	TIME_PROGRAM=$(which time);
 	size=$(( no * blockSize))
+
+	# should result into sthg like: 
+	#/usr/bin/time --append -o /tmp/tstt -f "$size %e" wget -q -O - "http://79.141.8.227:8000/xpfiles/1024.bin" > /dev/null
 
 	$TIME_PROGRAM --append -o "$OUTPUT_FILE" -f "$size %e" wget -q -O - "$BASE_URL/$size.bin" > /dev/null
 	

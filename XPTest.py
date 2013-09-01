@@ -173,7 +173,8 @@ class XPTest:
 		max_repeat = self.config["xp"]["repeat"]
 		for x in range(blockSize, maxSize, blockSize ):
 			# list of results per size
-			result = [ ]
+			results = [ ]
+			computedValues= [ ]
 			for currentSize in range(1,max_repeat):
 
 				fileToDownload= "http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]+"/"+str(currentSize)+".bin";
@@ -187,29 +188,32 @@ class XPTest:
 					shell=True
 					);
 				# append exection time
-				result.append( output.decode() )
+				results.append( output.decode() )
 
 
 
 			# sort it to make it easier
-			result.sort()
+			results.sort()
 			# append at the end the results
 			# add average/min/max at the end
-			average = math.fsum(result)/ result.len()
+			computedValues.append( math.fsum(results)/ results.len() )
 			
-			minimum=result.append( result.min() )
-			maximum=result.append( result.max() )
+			
+			computedValues.append(  results.min() )
+			computedValues.append(  results.max() )
 
 			# prepend filesize
-			result.insert(0, currentSize)
-			result.insert(1,average)
-			result.insert(2,minimum)
-			result.insert(3,maximum)
+			# result.insert(0, currentSize)
+			# TODO would be better to prepend
+			results.append( computedValues )
+			# result.insert(1,average)
+			# result.insert(2,minimum)
+			# result.insert(3,maximum)
 
 			# for debug
-			print("REsult",result)
+			print("REsult",results )
 			# print line
-			f.write(" ".join(result) )
+			f.write(" ".join(results) )
 			f.write("\n")
 
 		f.close()

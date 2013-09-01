@@ -6,46 +6,79 @@ import logging
 
 logger = logging.getLogger( __name__ )
 
-#
-# TODO to finish
+
+
+# represents an instance of a program, is associated to its pid
+# TODO need to provide full path or  env $PATH as an argument ?
 class Program:
 	# absolute 
 	def __init__(self, binary, need_root):
 		
 		if need_root:
-			self.sudo = "sudo "
+			self.sudo = "/usr/bin/sudo "
 		else:
 			self.sudo = ""
 
 		# self.src = src_dir
 		self.bin = binary
-
+		self.process = None;
 
 	# in case there are additionnal commands
-	def start(self,cmd_line):
-		# 
-		subprocess.check_call( self.sudo + self.bin + cmd_line ,shell=True)
+	# by default will launch programs in background
+	def start(self, cmd_line="", background=True):
+		#
+		self.process = subprocess.Popen( self.sudo + self.bin + cmd_line )
+		if background:
+			return self.process.poll()
+			# subprocess.check_call( ,shell=True)
+		else:
+			# self.pid = subprocess.
+			return self.process.wait( )
 
 	def get_bin_name(self):
 		return os.path.basename( self.bin);
 
 	#
 	def is_running(self):
-		output = subprocess.check_output("ps -e", shell=True).decode();
-		result = self.get_bin_name() in  output
-		#print ('Is ', self.bin, " running ?",result )
-		return  result
+		# check if process exists with registered PID ?
+		if self.process:
+			return self.process.poll()
+		return False;
+
+		# output = subprocess.check_output("ps -e", shell=True).decode();
+		# result = self.get_bin_name() in  output
+		# #print ('Is ', self.bin, " running ?",result )
+		# return  result
+
+	def get_pid(self):
+		if self.is_running():
+			return self.process.pid
+		else:
+			return False;
 
 	#
 	def stop(self):
 		# we don't care if it fails
-		if not self.is_running():
+		if self.is_running():
+			return self.process.kill()
+			#os.kill(pid, sig)
+		else:
 			logger.info ("Program '"+ self.bin +"'' not running")
-			return True
+		return True
+		# if not self.is_running():
+		# 	
+		# 	return True
 
-		return subprocess.check_call( self.sudo + "killall -9 "+ self.get_bin_name() ,shell=True)
+		# return subprocess.check_call( self.sudo + "killall -9 "+ self.get_bin_name() ,shell=True)
 
 
+
+# need to pass srcd_ir
+# class BuildableProgram(Program):
+#
+
+# TODO pass targets associated with install, make etc...
+# class BuildableViaMake(BuildableProgram):
 
 
 
@@ -94,8 +127,8 @@ class LISPmob(Program):
 
 
 	def __init__(self, src_dir, bin, config_file):
-		# need root
-		super().__init__( bin, True)
+		# need root True
+		super().__init__( bin, False )
 		# Program.__init__
 		if not os.path.isdir(src_dir):
 			raise Exception( src_dir + "is not a directory");
@@ -118,10 +151,10 @@ class LISPmob(Program):
 		subprocess.check_call("make -C "+ self.src +" all platform=router", shell=True);
 
 #config_file
-	def start(self):
-		# 
-		#subprocess.check_call( "sudo "+ self.src + "/lispd/lispd -D -f "+ self.config,shell=True)
-		return super().start( " -D -f "+ self.config)
+	# def start(self):
+	# 	# -D to run in background
+	# 	#subprocess.check_call( "sudo "+ self.src + "/lispd/lispd -D -f "+ self.config,shell=True)
+	# 	return super().start( " -f "+ self.config)
 
 	# def is_running(self):
 	# 	output = subprocess.check_output("ps -e ", shell=True).decode();

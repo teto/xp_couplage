@@ -45,6 +45,8 @@ class Host:
     def getIp(self):
         return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
 
+    # TODO should use pyroute2 
+    # or libnl python wrapper 
     def getInterfaces(self):
         pass
 
@@ -53,7 +55,7 @@ class Host:
     def ping(self, remotehost):
         return (os.system("ping -w 3 "+ remotehost ) == 0)
 
-    # for testing purposes
+    """ for testing purposes """
     def echo(self,msg):
         print(msg)
 
@@ -70,20 +72,25 @@ class Host:
     def daemon(self,action):
         print ("daemon subparser:", action );
         #daemon = lispmob.Program();
-
+        # special usecase
         if action == "compile":
             cmd = "{1}/build.sh {2} {1} {0}".format(
                         self.config['daemon']['bin'],
                         self.config['daemon']['src'],
                         self.config['kernel']['src']) 
-                    
             return subprocess.check_call( cmd ,shell=True)
-            
-        elif action == "load":
-            return subprocess.check_call("sudo "+ self.config['daemon']['bin'] + "&")
         else:
-            #
-            return os.system("sudo killall -r lig_daemon*)")
+            return getattr(self.lisp_daemon,action)();
+
+
+
+        #     
+            
+        # elif action == "load":
+        #     return subprocess.check_call("sudo "+ self.config['daemon']['bin'])
+        # else:
+        #     #
+        #     return os.system("sudo killall -r lig_daemon*)")
 
     def module(self,action):
 
@@ -129,7 +136,7 @@ if __name__ == '__main__':
 
     subparsers    = parser.add_subparsers(dest="mode", help='sub-command help')
     daemon_parser = subparsers.add_parser('daemon',help='daemon help')
-    daemon_parser.add_argument('action', choices=('compile','load','unload'), action="store")
+    daemon_parser.add_argument('action', choices=('compile','start','stop'), action="store")
     # daemon_parser.set_defaults(func=handle_daemon)
 
     module_parser = subparsers.add_parser('module', help='module help')

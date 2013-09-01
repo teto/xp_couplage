@@ -280,6 +280,9 @@ struct mptcp_cb {
 	u32 number_of_remote_rlocs;
 	u32 number_of_local_rlocs;
 
+	/* bitfield x-ieme Bit show modulo (x) taht are occupied */
+	u32 used_port_modulos; 
+
 	// u32 total_number_of_subflows_to_create;
 	// u32 number_of_interfaces;
 

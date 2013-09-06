@@ -34,7 +34,8 @@ class Host:
 
         self.router = lispmob.LISPmob( self.config['lispmob']['src'], self.config['lispmob']['bin'], self.config['lispmob']['config'])
 
-        self.mod = linux.InstalledModule( self.config['module']['name'] )
+        self.mod = linux.InstalledModule( self.config['module']['bin'])
+            #,self.config['module']['src'] )
 
         self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
         #self.port 
@@ -140,7 +141,7 @@ if __name__ == '__main__':
     # daemon_parser.set_defaults(func=handle_daemon)
 
     module_parser = subparsers.add_parser('module', help='module help')
-    module_parser.add_argument('action', choices=('compile','load','unload') )
+    module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
     # module_parser.set_defaults(func=handle_module)
 
 

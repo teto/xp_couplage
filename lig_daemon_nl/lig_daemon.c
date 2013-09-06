@@ -7,6 +7,19 @@ Libraries needed:
 -libexplain
 
 
+pid_t pid = fork();
+if ( pid == 0 ) {
+  // running in child process, replace it with progA
+  char *argv[] = { "./progA", NULL };
+  execv( argv[0], argv );
+} else {
+  // running in parent, wait for progA to complete
+  // and return its exit status.
+  int status;
+  waitpid( pid, &status, 0 );
+  printf("Child %d exited with status %d\n", pid, status );
+}
+
 
 **/
 
@@ -33,7 +46,16 @@ static int family_id = -1;
 static int group_id = -1;
 
 
+static int value_to_return = -1;
+
 #define PATH_TOWARDS_PROGRAM  "/home/teto/lig/process_lig_output.sh"
+
+enum PIPE_FILE_DESCRIPTERS
+{
+  READ_FD  = 0,
+  WRITE_FD = 1
+};
+
 
 /***
 
@@ -50,10 +72,18 @@ nl_socket_set_peer_port(struct nl_sock *sk, uint32_t port);
 */
 static int send_rlocs_list_for_eid( u_int32_t eid,u_int32_t token)
 {
+    /* file descriptors for pipes, stdin and stdout */
+    int fd[2];
+    FILE *fp = 0;
+    pid_t cpid;
+//  int status;
+//  char path[1035];
+
     struct nl_msg *msg = 0;
     void *user_hdr = 0;
     int ret = 0;
     int childExitStatus = 0;
+    char buffer[128];
     // int number_of_rlocs = 0;
     // TODO a renommer en remote
     u_int32_t number_of_rlocs = 0;
@@ -107,6 +137,7 @@ char *dot_ip = inet_ntoa(long_address);
         return -1;
     }
 
+    // dupé duplicates old fd into new fd
 
     /* last parameter should be always NULL */
 //    char* argv[] = { PATH_TOWARDS_PROGRAM, strEID, 0 };
@@ -120,8 +151,38 @@ char *dot_ip = inet_ntoa(long_address);
 
     // REnvoie tjrs 1 (pr les besoins de la simulation)
 
+    // can use pipe2 to pass options
+    // pipe waits for an array of size 2
+//    ret = pipe(df)
+
+    /* Open the command for reading.
+    TODO here we should fork ?
+    */
+
+
+    fp = popen(commandStr, "r");
+    if (fp == NULL) {
+        printf("Failed to run command\n" );
+        exit(-1);
+    }
+
+
+    while(!feof(fp)) {
+    	if(fgets(buffer, 128, fp) != NULL) {
+    		printf("REcorded buffer: '%s'", buffer);
+//    		result += buffer;
+        }
+    }
+//    waitpid()
+    ret = pclose(fd);
+
+    if( ret != 0)
+    {
+        printf("System call terminated abnormally!\n");
+        exit(-1);
+    }
     /** need to use macros since **/
-    childExitStatus = system(commandStr);
+//    childExitStatus = system(commandStr);
 
 //    if( childExitStatus == -1)
 //    {
@@ -130,37 +191,22 @@ char *dot_ip = inet_ntoa(long_address);
 //    }
 
 
-    if(!WIFEXITED(childExitStatus))
-    {
-      printf("System call terminated abnormally!\n");
-
-      if(WIFSIGNALED(childExitStatus) )
-      {
-        printf("The system call was terminated with the signal %d", WTERMSIG(childExitStatus));
-      }
-        return -1;
-    }
-    else
-    {
-        number_of_rlocs= WEXITSTATUS(childExitStatus);
-      printf("System call terminated normaly with the return value: %d\n", childExitStatus);
-    }
-
-
-
-//
-//    printf("Call of %s just finished \n", PATH_TOWARDS_PROGRAM) ;
-//
-//    if(ret < 0)
+//    if(!WIFEXITED(childExitStatus))
 //    {
-//        //fprintf(stderr, "%s\n", );
-//        printf("Command failed: %s\n", strerror(ret) );
-//        nlmsg_free(msg);
-//        // ret = 0;
+//      printf("System call terminated abnormally!\n");
+//
+//      if(WIFSIGNALED(childExitStatus) )
+//      {
+//        printf("The system call was terminated with the signal %d", WTERMSIG(childExitStatus));
+//      }
 //        return -1;
 //    }
+//    else
+//    {
+//        number_of_rlocs= WEXITSTATUS(childExitStatus);
+//      printf("System call terminated normaly with the return value: %d\n", childExitStatus);
+//    }
 
-//    number_of_rlocs = ret;
 
     printf("\"%d\" rlocs associated with EID: %s\n", number_of_rlocs, strEID );
 
@@ -182,7 +228,6 @@ char *dot_ip = inet_ntoa(long_address);
     if(ret != 0)
     {
         printf("Could not add ELA_RLOCS_NUMBER\n");
-//        goto skb_failure;
         nlmsg_free(msg);
         return ret;
     }
@@ -229,6 +274,7 @@ static int parse_cb(struct nl_msg *msg, void *arg)
     u_int32_t sender_pid = 0;
     printf("%s callback called\n",__func__);
     nlh = nlmsg_hdr(msg);
+    pid_t     cpid = 0;
 
 /**
  * Return pointer to Generic Netlink header
@@ -311,11 +357,41 @@ genlmsg_attrdataReturn pointer to message attributes.
                 printf( "EID received : %u.%u.%u.%u with local token %#x \n", NIPQUAD(eid), token );
 
                 // answers request
-                if(send_rlocs_list_for_eid(eid,token ) < 0)
-                {
-                    printf("Could not answer request for eid \n");//, &eid
-                    return -1;
+//                Here we fork the program !
+
+                cpid = fork();
+//                if (cpid == -1) {
+//                    perror("fork");
+//                    exit(EXIT_FAILURE);
+//                }
+
+                switch(cpid){
+                case -1:
+                    perror("fork failed");
+                    exit(EXIT_FAILURE);
+                    // Child case
+                    case 0:
+                        if(send_rlocs_list_for_eid(eid,token ) < 0)
+                        {
+                            printf("Could not answer request for eid \n");//, &eid
+//                            return -1;
+                            exit(-1);
+                        }
+                        break;
+
+                    default:
+                        break;
+                        // original process, does nothing
+
+
                 }
+                /*
+                on ouvre les pipes
+                */
+//                 int status;
+
+
+
 
             }
             else
@@ -362,6 +438,15 @@ int main(int argc, char **argv)
 
     struct nl_msg *msg = 0;
 //     struct s_lig_result *user_hdr;
+
+
+    /* parsing parameters */
+    if( argc > 1){
+
+        printf("converting 1st argument '%s' into integer '%d'\n", argv[1], atoi(argv[1]) );
+        value_to_return = atoi(argv[0]);
+    }
+
 
     sk = 0;
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# todo to remove
+# todo erase tracing before new experiment !!
 
 if [ $# -ne 1 ]; then
 	echo "Usage: $0 <commandToLaunch>"
@@ -13,6 +13,8 @@ fi
 CMD="$1"
 debugFolder="/sys/kernel/debug/tracing"
 
+
+# echo $$ > set_ftrace_pid to trace just this script
 # to clear file
 read -r -d '' command  <<EOF
 echo 0 > "$debugFolder/tracing_on"
@@ -24,7 +26,7 @@ echo 'queue_work' >> "$debugFolder/set_ftrace_filter"
 
 echo ":mod:lig_module" >> "$debugFolder/set_ftrace_filter"
 
-
+echo > "$debugFolder/trace"
 
 # enable ftrace
 echo 1 > "$debugFolder/tracing_on";
@@ -38,4 +40,4 @@ EOF
 eval "$command"
 
 #|grep -n
-echo -e "To see trace, exec:\nless $debugFolder/trace"
+echo -e "To see trace, exec:\nsudo less $debugFolder/trace"

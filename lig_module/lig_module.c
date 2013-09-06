@@ -186,12 +186,12 @@ int send_request_for_eid(u32 eid, u32 token)
 
     }
 
-    /* puts EID we are looking RLOCs for 
+    /* puts EID we are looking RLOCs for
          NLA_PUT_U32 will go to flag nla_put_failure: a l'air deprecié
         */
-    // NLA_PUT_U32( skb, ELA_EID, eid); 
-    // NLA_PUT_U32( skb, ELA_MPTCP_TOKEN, token ); 
-    
+    // NLA_PUT_U32( skb, ELA_EID, eid);
+    // NLA_PUT_U32( skb, ELA_MPTCP_TOKEN, token );
+
 
     rc = nla_put_u32( skb, ELA_MPTCP_TOKEN, token );
     // rc = nla_put_string(skb, ELA_EID, "hello world from kernel space\n");
@@ -230,10 +230,10 @@ int send_request_for_eid(u32 eid, u32 token)
         GFP_KERNEL
          );
 
-
+//       lig_debug(KERN_WARNING "Registered multicast group with id: %d\n", lig_multicast_group
     if(rc != 0)
     {
-        lig_debug( KERN_ERR "could not multicast packet: %d\n", rc);
+        lig_debug( KERN_ERR "could not multicast packet to group %d error np: %d\n",lig_multicast_group.id, rc);
 
         /* no such process */
         if (rc == -ESRCH)
@@ -252,7 +252,7 @@ int send_request_for_eid(u32 eid, u32 token)
     /* TODO wait for answer */
 
     /* */
-    
+
 }
 
 
@@ -306,7 +306,7 @@ struct nlmsghdr {
     //                NLMSG_HDRLEN);
 
 
-    
+
     struct nlattr {
             __u16           nla_len;
             __u16           nla_type;
@@ -351,7 +351,7 @@ struct nlmsghdr {
     in this structure the data is given
      */
             nla = info->attrs[ELA_MPTCP_TOKEN];
-            
+
             if (nla == 0)
             {
 
@@ -365,13 +365,13 @@ struct nlmsghdr {
             }
 
 
-            // TODO a copier dans le daemon pour voir 
+            // TODO a copier dans le daemon pour voir
             // nla_for_each_attr(pos, info->nlhdr, LIG_GENL_HDRLEN, )
             // {
             //     lig_debug("Z ");
             // }
              // memset(tb, 0, sizeof(struct nlattr *) * (ELA_MAX + 1));
-     
+
              // nla_for_each_attr(nla, 0, 20, rem) {
              //         u16 type = nla_type(nla);
              //        lig_debug("element of type %c\n",type );
@@ -382,7 +382,7 @@ struct nlmsghdr {
              //                    // lig_debug("has a policy\n");
              //                                 // goto errout;
              //                 // }
-     
+
              //                 tb[type] = (struct nlattr *)nla;
              //         }
              // }
@@ -396,7 +396,7 @@ struct nlmsghdr {
             {
                 // mydata = (char *)nla_data(na);
                 number_of_rlocs = nla_get_u32(nla);
-                
+
                 // if (mydata == NULL)
                     // lig_debug("error while receiving data\n");
                 // else
@@ -404,7 +404,7 @@ struct nlmsghdr {
 
                 // number of subflows to create per interface
                 // *
-                
+
                 lig_debug("number of rlocs should create %d \n", number_of_rlocs );
                 // lig_debug(KERN_NOTICE "eid %u.%u.%u.%u. Calling kernel function mptcp_generate_paths\n", NIPQUAD(eid) );
 
@@ -416,7 +416,7 @@ struct nlmsghdr {
 
                 /**
                 accept token/number_of subflows to
-                - 
+                -
 
                 **/
                 ret = mptcp_generate_paths( token, number_of_local_rlocs, number_of_rlocs  );
@@ -428,7 +428,7 @@ struct nlmsghdr {
                     lig_debug("call succeded\n" );
                 }
 
-                
+
             }
             else
             {
@@ -504,6 +504,9 @@ static int __init init_lig_module(void)
     if(rc != 0)
     {
         lig_debug(KERN_WARNING "could not register multicast group: %d\n",rc);
+    }
+    else {
+        lig_debug(KERN_WARNING "Registered multicast group with id: %d\n", lig_multicast_group.id);
     }
 
 

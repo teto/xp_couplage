@@ -348,7 +348,7 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 
 
 
-
+# Avoir une queue par XP
 
 if __name__ == '__main__':
 

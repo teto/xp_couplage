@@ -66,7 +66,7 @@ static int mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo
 
 	inet_get_local_port_range(&lowest_possible_port, &highest_possible_port);
 	remaining = (highest_possible_port - lowest_possible_port) + 1;
-	rover = net_random() % remaining + lowest_possible_port;
+	rover = ( net_random() % remaining ) + lowest_possible_port;
     rover += (desired_port_rest_after_modulo-(rover%modulo) );
 
     mptcp_debug("Try port number  %d\n", rover);
@@ -457,8 +457,9 @@ struct sock *mptcp_v4_search_req(const __be16 rport, const __be32 raddr,
 /* Create a new IPv4 subflow.
  *
  * We are in user-context and meta-sock-lock is hold.
+ * const
  */
-int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
+int mptcp_init4_subsockets(struct sock *meta_sk,  struct mptcp_loc4 *loc,
 			   struct mptcp_rem4 *rem)
 {
 	struct tcp_sock *tp;
@@ -468,8 +469,12 @@ int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
 	int ulid_size = 0, ret;
 	int bind_attempt = 0;
 	int desired_port_modulo = 0;
+	int desired_number_of_subflows = 0;
+	int i = 0;
 	// int MAX_BIND_ATTEMPTS = 3;
 	struct mptcp_cb *mpcb = tcp_sk(meta_sk)->mpcb;
+
+	desired_number_of_subflows = MPTCP_DESIRED_NB_OF_SUBFLOWS( mpcb );
 
 	/* Don't try again - even if it fails */
 	rem->bitfield |= (1 << loc->id);
@@ -524,15 +529,25 @@ int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
 	mptcp_debug("%s: token %#x pi %d src_addr:%pI4:%d dst_addr:%pI4:%d\n",
 		    __func__, tcp_sk(meta_sk)->mpcb->mptcp_loc_token,
 		    tp->mptcp->path_index, &loc_in.sin_addr,
-		    ntohs(loc_in.sin_port), &rem_in.sin_addr,
-		    ntohs(rem_in.sin_port));
+		    loc_in.sin_port, &rem_in.sin_addr,
+		    rem_in.sin_port);
 
 
+	mptcp_update_used_modulos(mpcb);
 
-	/**/
-	// find a 
-	desired_port_modulo = mptcp_find_free_index(mpcb->loc4_bits);
-	mptcp_debug("Desired port_modulo %d", desired_port_modulo );
+	/* compute a desired port modulo */
+	mptcp_for_each_bit_unset( mpcb->used_port_modulos, i ){
+
+		/* only want modulos < number_of_subflows once we found it we exit the loop */
+		if(i < desired_number_of_subflows){
+			desired_port_modulo = i;
+			break;
+		}
+
+	}
+
+
+	mptcp_debug("Desired rest after modulo %d : %d\n", desired_number_of_subflows, desired_port_modulo );
 
 retry_bind:
 	//|| (desired_port_modulo <= 0)
@@ -545,7 +560,7 @@ retry_bind:
 	{
 
 		//mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo)
-		loc_in.sin_port = mptcp_get_port_modulo_n( desired_port_modulo , mpcb->number_of_remote_rlocs);
+		loc_in.sin_port = mptcp_get_port_modulo_n( desired_port_modulo , desired_number_of_subflows);
 		mptcp_debug("Generated port %d\n", loc_in.sin_port);
 	}
 	else
@@ -566,8 +581,13 @@ retry_bind:
 		goto retry_bind;
 	}
 
-	mptcp_debug("Success \n" );
+	// save port into structure
+	loc->port = loc_in.sin_port;
+	mptcp_debug("Successful bind on port %d !\n", loc->port );
 
+	// mptcp_debug("New subflows established. Need to recompute modulos...\n");
+
+	
 	// }
 	// while ( bind_attempt < MAX_BIND_ATTEMPTS );
 

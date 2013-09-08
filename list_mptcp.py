@@ -146,7 +146,7 @@ tcpEntries 		= load_entries('/proc/net/tcp', tcpNames)
 # '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
 # where > means "align to right" and 8 is the width for specific value.
 def display_mptcp_entry(entry):
-	print ( "{protocol:>7}: {0[local_addr]:12}:{0[local_port]:5} -> {0[rmt_addr]}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
+	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
 					mptcpEntry,
 					protocol="MPTCP"
 					# local_addr=mptcpEntry["local_addr"],
@@ -160,14 +160,14 @@ def display_mptcp_entry(entry):
 
 def display_tcp_entry(tcpEntry,mptcpEntry):
 
-	print ( "{protocol:>7}: {0[local_addr]}:{0[local_port]} -> {0[rmt_addr]}:{0[rmt_port]} {local_port}%{subflows} = {result}".format(
+	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} {0[local_port]}%{subflows} = {result}".format(
 			tcpEntry,
 			protocol="TCP",
 			# local_addr=tcpEntry["local_addr"],
 			# local_port=tcpEntry["local_port"],
 			# rmt_addr=tcpEntry["rmt_addr"],
 			# rmt_port=tcpEntry["rmt_port"],
-			# subflows=mptcpEntry["ns"],
+			subflows=mptcpEntry["ns"],
 			result = ( tcpEntry["local_port"]  % mptcpEntry["ns"] )
 			 )
 	)

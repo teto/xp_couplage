@@ -1,0 +1,70 @@
+From f29ea15e0553e0aef582452e502b07e99df82a1d Mon Sep 17 00:00:00 2001
+From: Matt <mattator@gmail.com>
+Date: Fri, 6 Sep 2013 15:06:45 +0200
+Subject: [PATCH 2/3] Added struct nlmsghdr and genlmsghdr + some associated
+ functions
+
+---
+ python/netlink/capi.i      | 17 +++++++++++++++++
+ python/netlink/genl/capi.i | 10 ++++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/python/netlink/capi.i b/python/netlink/capi.i
+index fc13ecd..24a685e 100644
+--- a/python/netlink/capi.i
++++ b/python/netlink/capi.i
+@@ -169,6 +169,16 @@ extern void free_dump_params(struct nl_dump_params *);
+ extern int nl_connect(struct nl_sock *, int);
+ extern void nl_close(struct nl_sock *);
+ 
++
++struct nlmsghdr {
++        uint32_t nlmsg_len;
++        uint16_t nlmsg_type;
++        uint16_t nlmsg_flags;
++        uint32_t nlmsg_seq;
++        uint32_t nlmsg_pid;
++};
++
++
+ /* <netlink/socket.h> */
+ 
+ extern int nl_socket_add_membership(struct nl_sock *, int );
+@@ -191,6 +201,13 @@ extern void nl_socket_set_cb(struct nl_sock *, struct nl_cb *);
+ extern int nl_send_auto_complete(struct nl_sock *, struct nl_msg *);
+ extern int nl_recvmsgs(struct nl_sock *, struct nl_cb *);
+ 
++
++extern void nl_socket_disable_seq_check(struct nl_sock *);
++extern unsigned int nl_socket_use_seq(struct nl_sock *);
++extern void nl_socket_disable_auto_ack(struct nl_sock *);
++extern void nl_socket_enable_auto_ack(struct nl_sock *);
++
++
+ /* <netlink/msg.h> */
+ extern int			nlmsg_size(int);
+ extern int			nlmsg_total_size(int);
+diff --git a/python/netlink/genl/capi.i b/python/netlink/genl/capi.i
+index 069e617..92b366d 100644
+--- a/python/netlink/genl/capi.i
++++ b/python/netlink/genl/capi.i
+@@ -42,6 +42,16 @@ extern int genl_connect(struct nl_sock *);
+ extern void *genlmsg_put(struct nl_msg *, uint32_t, uint32_t,
+ 			 int, int, int, uint8_t, uint8_t);
+ 
++struct genlmsghdr *     genlmsg_hdr (struct nlmsghdr *nlh);
++
++void *  genlmsg_data (const struct genlmsghdr *gnlh);
++
++struct genlmsghdr {
++        uint8_t cmd;
++        uint8_t version;
++        uint16_t reserved;
++};
++
+ struct nlattr {
+ };
+ 
+-- 
+1.8.1.2
+

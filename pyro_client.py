@@ -1,11 +1,13 @@
-# saved as client.py
+#!/usr/bin/python3
 import Pyro4
-import sys
+# import sys
+# import host
 
 # passer
 
 # name=input("What ? ").strip()
 # nameserver hostname
+<<<<<<< HEAD
 
 # #
 #

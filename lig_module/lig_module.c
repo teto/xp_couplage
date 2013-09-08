@@ -44,6 +44,7 @@ static struct timer_list my_timer;
 
 // u8
 static u32 number_of_local_rlocs = 1;
+static u32 seq_nb = 0;
 
 // sock
 //static struct sock *nl_sk = NULL;
@@ -138,20 +139,13 @@ int send_request_for_eid(u32 eid, u32 token)
     struct sk_buff *skb = 0;
     int rc = 0;
     void *msg_head;
-    // char strEID[INET_ADDRSTRLEN] = "";
-
-    // snprintf(strEID,"%u.%u.%u.%u", NIPQUAD(eid) );
-    // nto
 
 
-    // printk( "sending request for eid\n " );
     lig_debug( "sending request to userspace for eid %u.%u.%u.%u and token %#x \n", NIPQUAD(eid), token );
 
 
     /* send a message back*/
-    /* allocate some memory, since the size is not yet known use NLMSG_GOODSIZE
-    GPF kernel take smore time but more chance to get memory
-    */
+    /* allocate some memory, since the size is not yet known use NLMSG_GOODSIZE */
     skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
 
     if (skb == NULL)
@@ -159,23 +153,13 @@ int send_request_for_eid(u32 eid, u32 token)
         lig_debug(KERN_ERR "could not allocate space for new msg");
         return -ENOMEM;
     }
-    /* create the message headers
-         arguments of genlmsg_put:
-           struct sk_buff *,
-           int (sending) pid,
-           int sequence number,
-           struct genl_family *,
-           int flags,
-           u8 command index (why do we need this?)
-*/
 
- // TODO passer des NL_AUTO plutot ?
     msg_head = genlmsg_put(
                         skb,
-                        0,            /* no de port  */
-                        0, /* no de seq (NL_AUTO_SEQ ne marche pas) */
-                        &lig_gnl_family,
-                        LIG_GENL_HDRLEN,    /* header length (to check) */
+                        0,              /* pid : NL_AUTO_PID no de port  */
+                        0, //seq_nb+1,    /* seq nb: ( ne marche pas) */
+                        &lig_gnl_family,    /* family */
+                        0,              /* Flags */
                         ELC_REQUEST_RLOCS_FOR_EID   /* command */
                         );
 
@@ -186,13 +170,6 @@ int send_request_for_eid(u32 eid, u32 token)
 
     }
 
-    /* puts EID we are looking RLOCs for 
-         NLA_PUT_U32 will go to flag nla_put_failure: a l'air deprecié
-        */
-    // NLA_PUT_U32( skb, ELA_EID, eid); 
-    // NLA_PUT_U32( skb, ELA_MPTCP_TOKEN, token ); 
-    
-
     rc = nla_put_u32( skb, ELA_MPTCP_TOKEN, token );
     // rc = nla_put_string(skb, ELA_EID, "hello world from kernel space\n");
     if (rc != 0)
@@ -200,7 +177,6 @@ int send_request_for_eid(u32 eid, u32 token)
         lig_debug( KERN_ERR "could not add token \n");
         return rc;
     }
-
 
     rc = nla_put_u32( skb, ELA_EID, eid);
     // rc = nla_put_string(skb, ELA_EID, "hello world from kernel space\n");
@@ -210,30 +186,24 @@ int send_request_for_eid(u32 eid, u32 token)
         return rc;
     }
 
-
-
     /* finalize the message */
     genlmsg_end(skb, msg_head);
 
+//genl_notify(struct sk_buff *skb, struct net *net, u32 portid, u32 group,
+//1096                  struct nlmsghdr *nlh, gfp_t flags)
 
     /* returns -ESRCH  (= -3) => no such process */
-        // todo a envoyer en broadcast
-    //struct sk_buff *skb, u32 pid,unsigned int group, gfp_t flags)
+    /* GFP_ATOMIC should be kept for cases where sleep is totally unacceptable, GFP_KERNEL is more likely to succeed */
     rc = genlmsg_multicast(
         skb,
         0,  /* set own pid to not recevie . 0 looks ok might use uint32_t nl_socket_get_local_port(const struct nl_sock *sk); as well ? */
-        // nl_socket_get_local_port(const struct nl_sock *sk);
-
-        lig_multicast_group.id,
-        // GFP_ATOMIC should be kept for cases where sleep is totally unacceptable
-        // + GFP_KERNEL is more likely to succeed
-        GFP_KERNEL
+        lig_multicast_group.id, /* group id */
+        GFP_KERNEL /* allocation */
          );
-
 
     if(rc != 0)
     {
-        lig_debug( KERN_ERR "could not multicast packet: %d\n", rc);
+        lig_debug( KERN_ERR "could not multicast packet to group %d error np: %d\n",lig_multicast_group.id, rc);
 
         /* no such process */
         if (rc == -ESRCH)
@@ -252,22 +222,12 @@ int send_request_for_eid(u32 eid, u32 token)
     /* TODO wait for answer */
 
     /* */
-    
+
 }
 
 
 
 /*
-The parsed Netlink attributes from the request;
-if the Generic Netlink family definition specified a Netlink attribute policy
-then the attributes would have already been validated.
-The doit() handler should do whatever processing is necessary and
-eturn zero on success or a negative value on failure.
-Negative return values will cause an NLMSG_ERROR message to be sent while a
- zero return value will only cause the NLMSG_ERROR message to be
- sent if the request is received with the NLM_F_ACK flag set.
-
-
  struct genl_info {
         u32                     snd_seq;
         u32                     snd_portid;
@@ -275,83 +235,49 @@ Negative return values will cause an NLMSG_ERROR message to be sent while a
         struct genlmsghdr *     genlhdr;
         void *                  userhdr;
         struct nlattr **        attrs;
-#ifdef CONFIG_NET_NS
-        struct net *            _net;
-#endif
+
         void *                  user_ptr[2]; };
  */
 int handle_results(struct sk_buff *skb_2, struct genl_info *info)
 {
-/*
 
-nl_msg
-struct genlmsghdr {
-          __u8    cmd;
-          __u8    version;
-          __u16   reserved;
-  };
-
-struct nlmsghdr {
-         __u32           nlmsg_len;       Length of message including header
-         __u16           nlmsg_type;      Message content
-         __u16           nlmsg_flags;     Additional flags
-         __u32           nlmsg_seq;       Sequence number
-         __u32           nlmsg_pid;       Sending process port ID
- };
-
-
-    // return (struct nlmsghdr *)((char *)user_hdr -
-    //                family->hdrsize -
-    //                GENL_HDRLEN -
-    //                NLMSG_HDRLEN);
-
-
-    
-    struct nlattr {
-            __u16           nla_len;
-            __u16           nla_type;
-    };
-**/
     struct nlattr *nla = 0;
 //    struct nlmsghdr *req_nlh = info->nlhdr;
     struct genlmsghdr* pGenlhdr = info->genlhdr;
     struct nlattr **tb;
     // int rc;
-    int pos = 0;
+//    int pos = 0;
     int cmd = 0;
     int ret = 0;
     u32 number_of_rlocs = 0;
     // u32 eid = 0;
     u32 token = 0;
-    int rem = 0;
+  //  int rem = 0;
 
 	// char * mydata;
 
 
-    lig_debug("call to \"%s\" in reaction to sender pid: %d \n",__func__, info->snd_pid );
+    lig_debug("call to \"%s\" in reaction to sender pid: %d, seq_nb being %d\n",__func__, info->snd_pid, info->snd_seq );
     lig_debug("Message length: %d \n", info->nlhdr->nlmsg_len );
 
     cmd = pGenlhdr->cmd;
     lig_debug("Command is: %d, that is \"%s\" n", cmd , getCommandStr(cmd) );
-    //,commandsStr[cmd]
 
-    // if (info == NULL)
-    // {
-    //     lig_debug(KERN_WARNING "genl_info is null\n");
-    //     goto out;
-    // }
 
-    switch(cmd)
-    {
-        case ELC_RESULTS:
-            lig_debug("recieved - a priori - the number of rlocs for the EID\n");
+    seq_nb = info->snd_seq;
+
     /*
     for each attribute there is an index in info->attrs which points to
     a nlattr structure
     in this structure the data is given
      */
+    switch(cmd)
+    {
+        case ELC_RESULTS:
+            lig_debug("recieved - a priori - the number of rlocs for the EID\n");
+
             nla = info->attrs[ELA_MPTCP_TOKEN];
-            
+
             if (nla == 0)
             {
 
@@ -365,60 +291,24 @@ struct nlmsghdr {
             }
 
 
-            // TODO a copier dans le daemon pour voir 
-            // nla_for_each_attr(pos, info->nlhdr, LIG_GENL_HDRLEN, )
-            // {
-            //     lig_debug("Z ");
-            // }
-             // memset(tb, 0, sizeof(struct nlattr *) * (ELA_MAX + 1));
-     
-             // nla_for_each_attr(nla, 0, 20, rem) {
-             //         u16 type = nla_type(nla);
-             //        lig_debug("element of type %c\n",type );
-             //         if (type > 0 && type <= ELA_MAX) {
-             //                 // if (policy) {
-             //                         // err = validate_nla(nla, ELA_MAX, policy);
-             //                         // if (err < 0)
-             //                    // lig_debug("has a policy\n");
-             //                                 // goto errout;
-             //                 // }
-     
-             //                 tb[type] = (struct nlattr *)nla;
-             //         }
-             // }
             // Normalement c'est parse par nla_parse
             nla = info->attrs[ELA_RLOCS_NUMBER];
             // nla = info->attrs[ELA_EID];
 
 
-            lig_debug("%p, %p , %p, %p ",info->attrs[ELA_MPTCP_TOKEN], info->attrs[ELA_MAX], info->attrs[ELA_EID], info->attrs[ELA_RLOCS_NUMBER] );
+            lig_debug("DEBUG: token: %p,ELA_MAX: %p , EID: %p, RLOC_nb %p ",info->attrs[ELA_MPTCP_TOKEN], info->attrs[ELA_MAX], info->attrs[ELA_EID], info->attrs[ELA_RLOCS_NUMBER] );
             if (nla)
             {
                 // mydata = (char *)nla_data(na);
                 number_of_rlocs = nla_get_u32(nla);
-                
-                // if (mydata == NULL)
-                    // lig_debug("error while receiving data\n");
-                // else
-                // queue_work
 
-                // number of subflows to create per interface
-                // *
-                
                 lig_debug("number of rlocs should create %d \n", number_of_rlocs );
-                // lig_debug(KERN_NOTICE "eid %u.%u.%u.%u. Calling kernel function mptcp_generate_paths\n", NIPQUAD(eid) );
 
 
                 if (token == 0){
                     number_of_local_rlocs = number_of_rlocs;
                 }
-                // TODO replace 3
 
-                /**
-                accept token/number_of subflows to
-                - 
-
-                **/
                 ret = mptcp_generate_paths( token, number_of_local_rlocs, number_of_rlocs  );
                 if( ret < 0)
                 {
@@ -428,7 +318,7 @@ struct nlmsghdr {
                     lig_debug("call succeded\n" );
                 }
 
-                
+
             }
             else
             {
@@ -439,12 +329,10 @@ struct nlmsghdr {
 
         case ELC_REQUEST_RLOCS_FOR_EID:
             lig_debug(KERN_WARNING "recieved a priori a request for an eid : should not happen\n");
-
             return -1;
 
         case ELC_SET_MAP_RESOLVER:
             lig_debug(KERN_WARNING "recieved a priori a request ELC_SET_MAP_RESOLVER\n");
-
             return -1;
 
         default:
@@ -486,24 +374,14 @@ static int __init init_lig_module(void)
 
 
 
-
-
-    // my_timer.function, my_timer.data
-    // setup_timer( &my_timer, my_timer_callback, 0 );
-
-    // lig_debug( "Starting timer to fire in 200ms (%ld)\n", jiffies );
-    // rc = mod_timer( &my_timer, jiffies + msecs_to_jiffies( TIMER_DELAY) );
-    // if (rc)
-    // {
-    //     lig_debug("Error in mod_timer\n");
-    // }
-
-    //
     rc = genl_register_mc_group(&lig_gnl_family, &lig_multicast_group);
 
     if(rc != 0)
     {
         lig_debug(KERN_WARNING "could not register multicast group: %d\n",rc);
+    }
+    else {
+        lig_debug(KERN_WARNING "Registered multicast group with id: %d\n", lig_multicast_group.id);
     }
 
 
@@ -579,11 +457,6 @@ static void __exit cleanup_lig_module(void)
 
     /* returns 0 or 1 according to previous timer state */
     del_timer( &my_timer );
-    // ret = del_timer( &my_timer );
-    // if (ret)
-    // {
-    //     lig_debug("The timer is still in use...\n");
-    // }
 
     unregister_mptcp_path_discovery_system();
         // lig_debug("successfully registered mptcp path discovery system\n");

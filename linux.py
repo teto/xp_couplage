@@ -2,10 +2,14 @@
 import os;
 import subprocess;
 import string;
+import logging;
 
 # TODO 
 # define RunningKernel 
 #
+logger = logging.getLogger( __name__)
+logger.setLevel( logging.DEBUG )
+
 
 class KernelSource:
 	
@@ -16,6 +20,12 @@ class KernelSource:
 		self.arch= "x86_64" # by default
 
 	#def set_arch() /get_arch
+
+	def compile(self):
+		return subprocess.check_call("make -C "+ self.src_dir + " -j5 all", shell=True)
+
+	def install(self):
+		return subprocess.check_call("make -C "+ self.src_dir + " install", shell=True)
 
 	def compile_module(self, module_dir ):
 		# if not os.path.isdir(module_dir):
@@ -52,27 +62,37 @@ class InstalledModule:
 	# should be statique
 	#KDIR=""
 	# fullpath
-	def __init__(self, name):
-		self.name = name;
+	def __init__(self, bin):
+		# self.name = name;
 		# self.src  = src_dir
+		self.bin = bin
 	
+	def get_name(self):
+		return os.path.splitext ( os.path.basename( self.bin ) )[0]
+
 	def load(self):
-		return subprocess.check_call("sudo modprobe " + self.name, shell=True)
+		#modprobe
+		if self.is_loaded():
+			logger.info( "Module already loaded. Unloading first...")
+			self.unload()
+
+		return subprocess.check_call("sudo insmod " + self.bin, shell=True)
 		#return False
 
 	def for_kernel(self):
-		return subprocess.check_output("modinfo "+ self.name +" -F vermagic | cut -d' ' -f1", shell=True);
+		return subprocess.check_output("modinfo "+ self.bin +" -F vermagic | cut -d' ' -f1", shell=True);
 
 	def is_loaded(self):
+		print( "name", self.get_name() )
 		output = subprocess.check_output("lsmod", shell=True).decode();
-		return  os.path.basename ( self.name) in  output
+		return  os.path.basename ( self.get_name() ) in  output
 
 	def unload(self):
 		if not self.is_loaded():
-			print("Module not loaded");
+			logger.info("Module not loaded");
 			return True;
 
-		return subprocess.check_call("sudo rmmod " + self.name , shell=True);
+		return subprocess.check_call("sudo rmmod " + self.bin, shell=True);
 		
 
 
@@ -91,18 +111,18 @@ class Ftrace:
 		# todo check ftrace was compiled into current kernel
 		self.test= "hello"
 
-	def add_to_filter(filter):
-		os.system(" echo "+ filter +" >> "+ debugFolder +"/set_ftrace_filter");
+	def add_to_filter(self,filter):
+		os.system(" echo "+ filter +" >> "+ self.debugFolder +"/set_ftrace_filter");
 
 
-	def start(command, graph):
+	def start(self,command, graph):
 		#echo 0 > "$debugFolder/tracing_on"
 		# run command subprocess.call()
 		# then stop
 		return False;
 
 
-	def stop():
-		os.system("echo 0 > "+ debugFolder + "/tracing_on");
+	def stop(self):
+		os.system("echo 0 > "+ self.debugFolder + "/tracing_on");
 		return False;
 

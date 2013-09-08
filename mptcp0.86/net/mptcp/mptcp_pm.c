@@ -160,6 +160,7 @@ EXPORT_SYMBOL(mptcp_generate_paths);
 /** 
 this function should go into a module
 sets bitfields later used by create_subflow_worker
+don't take into account the IPv6 case yet
 **/
 void mptcp_set_addresses_homemade(struct sock *meta_sk)
 {
@@ -171,14 +172,15 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 	// struct sock *meta_sk = mpcb->meta_sk;
 	int iter = 0, retry = 0;
 	int i;
-	u8 total_number_of_subflows_to_create = 0;
+	u8 number_of_subflows_to_create = 0;
 	u8 desired_number_of_subflows = 0;
+	// u8 desired_number_of_subflows = 0;
 	u8 nb_of_remote_ifs =0, nb_of_local_ifs = 0;
 
 	/** number of supposedly disjoint wan paths between remote and local LISP sites  **/
 	u8 number_of_physical_paths = 0;
 	number_of_physical_paths = mpcb->number_of_remote_rlocs * mpcb->number_of_local_rlocs;
-	mptcp_debug("Supposed number of disjoint physicial paths: %d. To compare with cnt_subflows %d \n", number_of_physical_paths,mpcb->cnt_subflows );
+	mptcp_debug("Supposed number of disjoint physical paths: %d. To compare with cnt_subflows %d \n", number_of_physical_paths,mpcb->cnt_subflows );
 
 
 	/** count number of sublfows in fullmesh mode **/
@@ -186,31 +188,38 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 		mptcp_debug("Adding remote IPv4\n");
 		nb_of_remote_ifs++;
 	}
-	mptcp_for_each_bit_set(mpcb->rem6_bits, i) {
-		mptcp_debug("Adding remote IPv6\n");
-		nb_of_remote_ifs++;
-	}
+	// mptcp_for_each_bit_set(mpcb->rem6_bits, i) {
+	// 	mptcp_debug("Adding remote IPv6\n");
+	// 	nb_of_remote_ifs++;
+	// }
 
 	mptcp_for_each_bit_set(mpcb->loc4_bits, i) {
 		mptcp_debug("Adding local IPv4\n");
 		nb_of_local_ifs++;
 	}
-	mptcp_for_each_bit_set(mpcb->loc6_bits, i) {
-		mptcp_debug("Adding local IPv6\n");
-		nb_of_local_ifs++;
-	}
 
-	mptcp_debug("Fullmesh between interfaces =>  %d subflows .  \n", nb_of_local_ifs * nb_of_remote_ifs );
+	// mptcp_for_each_bit_set(mpcb->loc6_bits, i) {
+	// 	mptcp_debug("Adding local IPv6\n");
+	// 	nb_of_local_ifs++;
+	// }
+
+	mptcp_debug("Fullmesh between interfaces, %d local * %d remote =  %d subflows .  \n", nb_of_local_ifs, nb_of_remote_ifs  , nb_of_local_ifs * nb_of_remote_ifs );
 
 
-	desired_number_of_subflows = max(mpcb->cnt_subflows,number_of_physical_paths );
-	if(mpcb->cnt_subflows >= desired_number_of_subflows)
+	desired_number_of_subflows = max(mpcb->cnt_subflows, number_of_physical_paths );
+
+	mptcp_debug("Want to create %d subflows . %d already exist", desired_number_of_subflows, mpcb->cnt_subflows);
+
+	number_of_subflows_to_create = desired_number_of_subflows-mpcb->cnt_subflows;
+
+	if(number_of_subflows_to_create <= 0)
 	{
 		mptcp_debug("Enough subflows already active\n");
 		goto out;
 	}
 
-mptcp_debug("Not enough subflows created %d \n", desired_number_of_subflows-mpcb->cnt_subflows );
+	
+	mptcp_debug("Not enough subflows created. Still need to create %d \n", number_of_subflows_to_create );
 
 	/* if multiports is requested, we work with the main address
 	 * and play only with the ports
@@ -258,33 +267,58 @@ mptcp_debug("Not enough subflows created %d \n", desired_number_of_subflows-mpcb
 // 					continue;
 // 				}
 
-	 		for(iter = 0; iter < desired_number_of_subflows ; ++iter)
-	 		{
+ 	/** fill this bitfield with used moduls */
+	mpcb->used_port_modulos = 0;
+	// GCC extension allows to do 0b00010100
+	mptcp_debug("mpcb->used_port_modulos Before :%d",mpcb->used_port_modulos);
+	
 
-				i = __mptcp_find_free_index(mpcb->loc4_bits, -1, mpcb->next_v4_index);
-				if (i < 0) {
-					mptcp_debug("%s: At max num of local addresses: %d --- not adding address \n",
-						    __func__, MPTCP_MAX_ADDR
-						    // &ifa_address
-						    );
-					goto out;
-				}
+	// will set to 1 port modulo already used for each socket already created
+	mptcp_for_each_bit_set(mpcb->loc4_bits,i ){
 
-				mpcb->locaddr4[i].addr.s_addr = mpcb->locaddr4[0].addr.s_addr;
-				mpcb->locaddr4[i].port = 0;
+		mptcp_debug("%d port used for subflow : %d", mpcb->locaddr4[i].port , i);
+		iter = mpcb->locaddr4[i].port % desired_number_of_subflows;
+		
+		mpcb->used_port_modulos |= (1 << iter);
+
+	}
+	mptcp_debug("mpcb->used_port_modulos after: %d", mpcb->used_port_modulos);
+
+	// for(iter = 0; ){
+
+	// }
+
+	//mptcp_for_each_sk(meta_tp->mpcb, sk_it) {
+
+	for(iter = 0; iter < number_of_subflows_to_create ; ++iter)
+	{
+
+		i = __mptcp_find_free_index(mpcb->loc4_bits, -1, mpcb->next_v4_index);
+		if (i < 0) {
+			mptcp_debug("%s: At max num of local addresses: %d --- not adding address \n",
+				    __func__, MPTCP_MAX_ADDR
+				    // &ifa_address
+				    );
+			goto out;
+		}
+
+		mpcb->locaddr4[i].addr.s_addr = mpcb->locaddr4[0].addr.s_addr;
+		mpcb->locaddr4[i].port = 0;
 
 
-				mpcb->locaddr4[i].desired_port_modulo =  iter % mpcb->number_of_remote_rlocs ;
-				mptcp_debug("Port modulo set to %d at index %d\n",iter, i);
-				mpcb->locaddr4[i].id = i;
-				// mpcb->locaddr4[i].low_prio = (dev->flags & IFF_MPBACKUP) ?
-				// 				1 : 0;
-				mpcb->loc4_bits |= (1 << i);
-				mpcb->next_v4_index = i + 1;
+		//mpcb->locaddr4[i].desired_port_modulo =  iter % mpcb->number_of_remote_rlocs;
+		// mpcb->locaddr4[i].desired_port_modulo =  iter % mpcb->number_of_remote_rlocs;
+		// mptcp_debug("Port modulo set to %d at index %d\n", iter, i);
+		mpcb->locaddr4[i].id = i;
+		// mpcb->locaddr4[i].low_prio = (dev->flags & IFF_MPBACKUP) ?
+		// 				1 : 0;
+		mpcb->loc4_bits |= (1 << i);
+		mpcb->next_v4_index = i + 1;
 
-				// Nous on ne veut plus l'advertiser donc on fait sans ca
-				// mptcp_v4_send_add_addr(i, mpcb);
-			}
+		// Veut-on l'advertiser ?
+		// Nous on ne veut plus l'advertiser donc on fait sans ca
+		// mptcp_v4_send_add_addr(i, mpcb);
+	}
 
 // cont_ipv6:
 // ; /* This ; is necessary to fix build-errors when IPv6 is disabled */

@@ -49,11 +49,12 @@
 /**
 number of trials before giving up about specifying a specific port number
 **/
-#define MPTCP_MAX_BIND_TRIALS_NB 5
+#define MPTCP_MAX_BIND_TRIALS_NB 15
 
 
-/* added by matt 
-returns a random port which is modulo n 
+/*
+added by matt
+returns a random port which is modulo n
 */
 static int mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo)
 {
@@ -466,6 +467,7 @@ int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
 	struct socket sock;
 	int ulid_size = 0, ret;
 	int bind_attempt = 0;
+	int desired_port_modulo = 0;
 	// int MAX_BIND_ATTEMPTS = 3;
 	struct mptcp_cb *mpcb = tcp_sk(meta_sk)->mpcb;
 
@@ -514,7 +516,7 @@ int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
 		rem_in.sin_port = rem->port;
 	else
 		rem_in.sin_port = inet_sk(meta_sk)->inet_dport;
-	
+
 
 	loc_in.sin_addr = loc->addr;
 	rem_in.sin_addr = rem->addr;
@@ -525,20 +527,28 @@ int mptcp_init4_subsockets(struct sock *meta_sk, const struct mptcp_loc4 *loc,
 		    ntohs(loc_in.sin_port), &rem_in.sin_addr,
 		    ntohs(rem_in.sin_port));
 
-	
+
+
+	/**/
+	// find a 
+	desired_port_modulo = mptcp_find_free_index(mpcb->loc4_bits);
+	mptcp_debug("Desired port_modulo %d", desired_port_modulo );
+
 retry_bind:
-	if( (bind_attempt == MPTCP_MAX_BIND_TRIALS_NB) || (loc->desired_port_modulo == 0) )
+	//|| (desired_port_modulo <= 0)
+	
+	if( (bind_attempt == MPTCP_MAX_BIND_TRIALS_NB)  )
 	{
 		loc_in.sin_port = 0;
-		
 	}
 	else if( bind_attempt < MPTCP_MAX_BIND_TRIALS_NB  )
 	{
 
 		//mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo)
-		loc_in.sin_port = mptcp_get_port_modulo_n( loc->desired_port_modulo , mpcb->number_of_remote_rlocs);
+		loc_in.sin_port = mptcp_get_port_modulo_n( desired_port_modulo , mpcb->number_of_remote_rlocs);
+		mptcp_debug("Generated port %d\n", loc_in.sin_port);
 	}
-	else 
+	else
 	{
 		goto error;
 	}
@@ -546,8 +556,8 @@ retry_bind:
 	bind_attempt++;
 
 	// TODO generate an appropriate port
-	mptcp_debug("Bind attempt %d of %d .Trying to bind to port %d ...", bind_attempt, MPTCP_MAX_BIND_TRIALS_NB, loc_in.sin_port );
-	
+	mptcp_debug("Bind attempt %d of %d .Trying to bind to port %d ...\n", bind_attempt, MPTCP_MAX_BIND_TRIALS_NB, loc_in.sin_port );
+
 	/** returns 0 on success , errno otherwise **/
 	ret = sock.ops->bind(&sock, (struct sockaddr *)&loc_in, ulid_size);
 
@@ -555,9 +565,9 @@ retry_bind:
 		mptcp_debug("Failure\n" );
 		goto retry_bind;
 	}
-		
+
 	mptcp_debug("Success \n" );
-	
+
 	// }
 	// while ( bind_attempt < MAX_BIND_ATTEMPTS );
 

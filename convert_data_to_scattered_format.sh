@@ -39,7 +39,7 @@ no=0
 file_list=$( find "$OUTPUT_FOLDER" -name \*.data -type f -print );
 
 echo "================================="
-echo "Mergind data from datafiles:"
+echo "Merging data from datafiles:"
 for file in $file_list; do
 	echo "$file"
 done 

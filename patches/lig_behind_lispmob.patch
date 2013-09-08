@@ -1,0 +1,161 @@
+diff --git a/lispd/lispd_map_request.c b/lispd/lispd_map_request.c
+index 84d5611..3882cf1 100644
+--- a/lispd/lispd_map_request.c
++++ b/lispd/lispd_map_request.c
+@@ -3,7 +3,7 @@
+  *
+  * This file is part of LISP Mobile Node Implementation.
+  * Send a map request.
+- * 
++ *
+  * Copyright (C) 2011 Cisco Systems, Inc, 2011. All rights reserved.
+  *
+  * This program is free software; you can redistribute it and/or
+@@ -45,15 +45,15 @@
+  *
+  *
+  *  Next is the inner IP header, either struct ip6_hdr or struct
+- *  iphdr. 
++ *  iphdr.
+  *
+- *  This is follwed by a UDP header, random source port, 4342 
++ *  This is follwed by a UDP header, random source port, 4342
+  *  dest port.
+  *
+  *  Followed by a struct lisp_pkt_map_request_t:
+  *
+  * Map-Request Message Format
+- *   
++ *
+  *       0                   1                   2                   3
+  *       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  *      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+@@ -379,6 +379,10 @@ int add_encap_headers(
+      int                                        aux_eid_prefix_length   = 0;
+      int                                        aux_iid                 = -1;
+ 
++    // added by matt
++    lispd_map_cache_entry *entry = NULL;
++
++
+      /* Get the requested EID prefix */
+      record = (lispd_pkt_map_request_eid_prefix_record_t *)*cur_ptr;
+      /* Auxiliar lispd_mapping_elt created to be filled with pkt_process_eid_afi */
+@@ -394,15 +398,66 @@ int add_encap_headers(
+      }
+      requested_mapping->eid_prefix_length = record->eid_prefix_length;
+ 
+-     /* Check the existence of the requested EID */
++     /* Check the existence of the requested EID (in static db ?)*/
+      /*  We don't use prefix mask and use by default 32 or 128*/
+      mapping = lookup_eid_in_db(requested_mapping->eid_prefix);
+      if (!mapping){
+-         lispd_log_msg(LISP_LOG_DEBUG_1,"The requested EID doesn't belong to this node: %s/%d",
++
++
++            lispd_log_msg(LISP_LOG_DEBUG_1,"The requested EID doesn't belong to this node: %s/%d... checking in other places",
+                  get_char_from_lisp_addr_t(requested_mapping->eid_prefix),
+                  requested_mapping->eid_prefix_length);
+-         free_mapping_elt (requested_mapping, TRUE);
+-         return (BAD);
++
++            /* takes lisp_addr_t eid as parameter and returns a lispd_map_cache_entry if irequested eid already exists  in cache */
++            entry = lookup_map_cache(requested_mapping->eid_prefix );
++
++
++            //arnatal XXX: is this the correct error type?
++            if (entry == NULL){ /* There is no entry in the map cache */
++
++
++                lispd_log_msg(LISP_LOG_DEBUG_1, "No map cache retrieved for eid %s",get_char_from_lisp_addr_t(requested_mapping->eid_prefix));
++
++
++                /* requested eid, src eid */
++                /*  handle_map_cache_miss a newly created remote_rloc */
++                if( BAD == handle_map_cache_miss(&requested_mapping->eid_prefix, local_rloc))
++                {
++                    lispd_log_msg(LISP_LOG_DEBUG_1, " handle_map_cache_miss failed");
++                }
++
++                lispd_log_msg(LISP_LOG_DEBUG_1,"handle cache miss with source : %s and dest %s",
++                            get_char_from_lisp_addr_t( requested_mapping->eid_prefix ),
++                               get_char_from_lisp_addr_t(*remote_rloc)
++                               );
++            }
++
++            /* Packets with negative map cache entry, no active map
++cache entry or no map cache entry are forwarded to PETR */
++            if ((entry == NULL) || (entry->active == NO_ACTIVE) || (entry->mapping->locator_count == 0) ){ /* There is no entry or is not active*/
++                    lispd_log_msg(LISP_LOG_DEBUG_1,"Could not retrieve EID: %s/%d",
++                            get_char_from_lisp_addr_t(requested_mapping->eid_prefix),
++                            requested_mapping->eid_prefix_length);
++
++//                free_mapping_elt (requested_mapping, TRUE);
++                return(GOOD);
++            }
++
++
++            // update identifier
++            mapping = entry->mapping;
++
++
++
++
++
++
++
++//         lispd_log_msg(LISP_LOG_DEBUG_1,"The requested EID doesn't belong to this node: %s/%d",
++//                 get_char_from_lisp_addr_t(requested_mapping->eid_prefix),
++//                 requested_mapping->eid_prefix_length);
++//         free_mapping_elt (requested_mapping, TRUE);
++//         return (BAD);
+      }
+      free_mapping_elt (requested_mapping, TRUE);
+ 
+diff --git a/lispd/lispd_output.c b/lispd/lispd_output.c
+index 3bc7d5b..dce721d 100644
+--- a/lispd/lispd_output.c
++++ b/lispd/lispd_output.c
+@@ -480,7 +480,6 @@ int get_output_afi_based_on_entry (lispd_map_cache_entry *map_cache_entry)
+ /*
+  * Calculate the hash of the 5 tuples of a packet
+  */
+-
+ uint32_t get_hash_from_tuple (packet_tuple tuple)
+ {
+     int hash    = 0;
+@@ -518,6 +517,9 @@ uint32_t get_hash_from_tuple (packet_tuple tuple)
+     return (hash);
+ }
+ 
++
++
++
+ /*
+  * Select the source and destination RLOC according to the priority and weight.
+  * The destination RLOC is selected according to the AFI of the selected source RLOC
+@@ -561,13 +563,17 @@ int select_src_rmt_locators_from_balancing_locators_vec (
+         return (BAD);
+     }
+ 
+-    hash = get_hash_from_tuple (tuple);
+-    if (hash == 0){
+-        lispd_log_msg(LISP_LOG_DEBUG_1,"get_rloc_from_tuple: Couldn't get the hash of the tuple to select the rloc. Using the default rloc");
+-        *src_locator = src_loc_vec[0];
+-        *dst_locator = dst_loc_vec[0];
+-    }
+-    pos = hash%src_vec_len;
++    // hash = get_hash_from_tuple (tuple);
++    // if (hash == 0){
++    //     lispd_log_msg(LISP_LOG_DEBUG_1,"get_rloc_from_tuple: Couldn't get the hash of the tuple to select the rloc. Using the default rloc");
++    //     *src_locator = src_loc_vec[0];
++    //     *dst_locator = dst_loc_vec[0];
++    // }
++
++
++    pos = tuple.src_port %src_vec_len;
++
++
+     *src_locator =  src_loc_vec[pos];
+ 
+     switch ((*src_locator)->locator_addr->afi){

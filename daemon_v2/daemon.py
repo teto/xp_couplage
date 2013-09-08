@@ -59,12 +59,19 @@ def sigint_handler(signum, frame):
 
 class LigDaemon:
 
+
+	def add_membership(self):
+		# nl.nl_socket_drop_membership
+		pass
+
 	def __init__(self,lig_program, mapresolver=None,simulate=None):
 		self.done = 1;
 		# by default, should be possible to override
 		self.mapresolver 	= mapresolver or "153.16.49.112";
 		self.simulate 		= simulate
 		self.lig_program 	= lig_program
+
+
 
 		# allocates callback
 		tx_cb = nl.nl_cb_alloc(nl.NL_CB_DEFAULT)
@@ -75,14 +82,25 @@ class LigDaemon:
 		# allocates sockets
 		self.sk = nl.nl_socket_alloc_cb(tx_cb)
 
+
+
+
 		# set callback handers
 		# last parameter represents arguments to pass
 		logger.info("Setting callback functions")
 
-		nl.py_nl_cb_err(self.rx_cb, nl.NL_CB_CUSTOM, error_handler, self);
-		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_FINISH, nl.NL_CB_CUSTOM, finish_handler, self);
-		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_ACK, nl.NL_CB_CUSTOM, ack_handler, self);
+		# nl.py_nl_cb_err(self.rx_cb, nl.NL_CB_CUSTOM, error_handler, self);
+
+
+		# nl_cb_set( callback_set, type, kind, function,args )
+		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_FINISH, nl.NL_CB_VERBOSE, finish_handler, self);
+		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_ACK, nl.NL_CB_VERBOSE, ack_handler, self);
 		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_VALID, nl.NL_CB_CUSTOM, msg_handler, self);
+		# nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_VALID, nl.NL_CB_CUSTOM, self.handle, None);
+
+		# Notifications do not use sequence numbers, disable sequence number checking.
+		nl.nl_socket_disable_seq_check(self.sk);
+		nl.nl_socket_disable_auto_ack(self.sk);
 
 		# establish connection
 		genl.genl_connect(self.sk)
@@ -91,8 +109,6 @@ class LigDaemon:
 		# register to the multicast group
 		# print( dir( sys.modules["netlink.genl.capi"]) )
 		# print( dir( sys.modules["netlink.capi"]) )
-		# family = genl.genl_ctrl_resolve(sk, LIG_FAMILY_NAME);
-		# logger.info
 		logger.info("family %s registered with number %d"%(LIG_FAMILY_NAME, self.family_id));
 
 		self.group_id = genl.genl_ctrl_resolve_grp (self.sk, LIG_FAMILY_NAME, LIG_GROUP_NAME);
@@ -102,8 +118,6 @@ class LigDaemon:
 			exit(1)
 
 		logger.info("Group id found: %d" % self.group_id);
-
-
 		logger.info("Using mapresolver %s"%self.mapresolver)
 
 		if self.simulate:
@@ -112,8 +126,7 @@ class LigDaemon:
 			logger.info("Real mode enabled")
 
 
-		# nl.nl_socket_disable_seq_check(sk);
-		nl.nl_socket_disable_auto_ack(self.sk);
+
 
 		ret = nl.nl_socket_add_membership(self.sk, self.group_id);
 
@@ -126,32 +139,33 @@ class LigDaemon:
 
 
 
-	# def msg_handler(m, a):
-	# 	print("hello world")
-
-
 	# send answer via netlink 
 	# send it into antoehr thread ?
-	def send_rlocs_list_for_eid(self, token, nb_of_rlocs):
-		logger.info("Sending rlocs nb of '%d' for token %d "%(nb_of_rlocs,token))
+	def send_rlocs_list_for_eid(self, seq_nb, token, nb_of_rlocs):
+		logger.info("Sending rlocs nb of '%d' for token %d with seq nb %d"%(nb_of_rlocs,token,seq_nb))
 		msg = nl.nlmsg_alloc()
+
+		# returns void*
 		genl.genlmsg_put(msg,
 						0, # port
 						0, # seq nb
 						self.family_id, # family_id
 						0, # length of user header
 						0, # optional flags
-						ELC_RESULTS, 	 # id
+						ELC_RESULTS, 	 # cmd
 						LIG_GENL_VERSION # version
 						)
 
 		nl.nla_put_u32(msg, ELA_RLOCS_NUMBER, nb_of_rlocs );
+		nl.nla_put_u32(msg, ELA_MPTCP_TOKEN , token );
 
 		err = nl.nl_send_auto_complete(self.sk, msg);
 		if err < 0:
 			logger.error("Error while sending answer")
 			nl.nlmsg_free(msg)
 			return False
+
+		nl.nlmsg_free(msg)
 		return True
 
 
@@ -160,9 +174,11 @@ class LigDaemon:
 		# cbd.done > 0 and not err < 0
 		while True:
 			# expects handle / cb configuration
+			# see nl.c:965
 			err = nl.nl_recvmsgs(self.sk, self.rx_cb)
+			# err = nl.nl_recvmsgs_default(self.sk)
 			if err < 0:
-				logger.error( "Error %d: %s"% (err, nl.nl_geterror(err)) )
+				logger.error( "Error for nl_recvmsgs: %d: %s"% (err, nl.nl_geterror(err)) )
 				break;
 
 
@@ -196,11 +212,12 @@ class LigDaemon:
 
 		try:
 			nlmsghdr = nl.nlmsg_hdr(m)
+			print("nlmsghdr: flags:", nlmsghdr.nlmsg_flags , "seq:", nlmsghdr.nlmsg_seq )
 
 			genlhdr = genl.genlmsg_hdr( nlmsghdr )
 			if not genlhdr:
 				logger.error("Could not get generic header")
-				return -1
+				return nl.NL_STOP
 
 			if genlhdr.cmd == ELC_REQUEST_RLOCS_FOR_EID:
 				logger.info("Request RLOC for an EID")
@@ -217,7 +234,7 @@ class LigDaemon:
 
 				if err < 0:
 					logger.error("An error happened while parsing attributes")
-					return -1;
+					return nl.NL_STOP;
 
 
 				logger.info("Looking for ELA")
@@ -239,8 +256,11 @@ class LigDaemon:
 					nb = self.retrieve_number_of_rlocs( addr )
 					if nb < 0:
 						logger.warning("An error happened while retrieveing nb of rlocs")
+						return nl.NL_STOP
 					else:
-						self.send_rlocs_list_for_eid( token, nb )
+						#nlmsghdr.nlmsg_seq + 1
+						self.send_rlocs_list_for_eid(  0, token, nb )
+						return nl.NL_SKIP
 
 				else:
 					logger.error("Missing critical attribute in packet")
@@ -260,93 +280,36 @@ class LigDaemon:
 			print( "test", v.message,e )
 			traceback.print_tb(tb)
 
+			return nl.NL_SKIP
+
 
 
 
 def error_handler(err, a):
 	print("error handler")
 	logger.error("Error handler called")
-	a.done = err.error
+	# a.done = err.error
 	return nl.NL_STOP
 
 def finish_handler(m, arg):
-
+	print("finish handler")
 	logger.info("finish_handler called")
 	return nl.NL_SKIP
 
 def ack_handler(m, arg):
-
+	print("ack handler")
 	logger.info("ack handler called")
-	arg.done = 0
+	# arg.done = 0
 	return nl.NL_STOP
 
 
 def msg_handler(m, arg):
 
 	print("msg handler called")
+	# print ( dir (arg) )
 	arg.handle(m)
-# 	try:
-# 		# ok those 2 functions exist
-# 		nlmsghdr = nl.nlmsg_hdr(m)
-
-# 		# print("message length", nlmsghdr.nlmsg_len);
-# 		# print("message sent from pid ", nlmsghdr.nlmsg_pid);
-# 		# print("message sent from type ", nlmsghdr.nlmsg_type);
-# # nlhdr_nlmsg_len_get(nlhdr)
-# 		# print ( "nlhdr msg length", nlhdr._ )
-# 		genlhdr = genl.genlmsg_hdr( nlmsghdr )
-# 		if not genlhdr:
-# 			logger.error("Could not get generic header")
-# 		# genlhdr = nl.nlmsg_data(nlhdr)
-		
-# 		if genlhdr.cmd == ELC_REQUEST_RLOCS_FOR_EID:
-# 			logger.info("Request RLOC for an EID")
-# 			print ("version ",genlhdr.version ,  )
-# 			# print ( "genlhdr", dir(genlhdr) )
-# 			# print("genl cmd", genl.cmd)
-			
-# 			# attrs = None
-# 			print("Message handler got called");
-# 			err, attrs = genl.py_genlmsg_parse(
-# 					nlmsghdr, 
-# 					0, # will be returned as an attribute
-# 	 				ELA_MAX, 
-# 	 				None
-# 	 				)
-
-# 			if err < 0:
-# 				logger.error("An error happened while parsing attributes")
-# 				return -1;
-
-# 			if ELA_EID in attrs:
-# 				eid = nl.nla_get_u32(attrs[ELA_EID]);
-# 				token = nl.nla_get_u32(attrs[ELA_MPTCP_TOKEN]);
-				
-# 				# I => unsigned int
-# 				packed_value = struct.pack('I', eid)
-# 				addr = socket.inet_ntoa(packed_value)
-# 				logger.info("Requested EID %s for toekn %d"%(addr,token) )
-
-
-# 			else:
-# 				logger.error("Missing critical attribute in packet")
-
-# 		else:
-# 			logger.warning("Unhandled command %d"% genlhdr.cmd)
-
-# 		# nlmsg_data returns void* so not usable straightaway
-
-# 		# TODO need to retrieve command
-# 		print("e", err)
-
-# 		return nl.NL_SKIP
-
-# 	except Exception as e:
-# 		(t,v,tb) = sys.exc_info()
-# 		print( "test", v.message,e )
-# 		traceback.print_tb(tb)
-
-
+	# return nl.NL_OK
+	return nl.NL_SKIP 
 
 
 if __name__ == '__main__':

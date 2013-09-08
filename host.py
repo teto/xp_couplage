@@ -31,6 +31,7 @@ class Host:
         # first need to compile module
         self.config.read(configFile)
 
+        self.kernel = linux.KernelSource( self.config['kernel']['src'] );
 
         self.router = lispmob.LISPmob( self.config['lispmob']['src'], self.config['lispmob']['bin'], self.config['lispmob']['config'])
 
@@ -69,6 +70,9 @@ class Host:
 
     def lispmob(self,action):
         return getattr(self.router,action)();
+
+    def kernel(self,action):
+        return getattr(self.kernel,action)();
 
     def daemon(self,action):
         print ("daemon subparser:", action );
@@ -144,7 +148,8 @@ if __name__ == '__main__':
     module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
     # module_parser.set_defaults(func=handle_module)
 
-
+    kernel_parser = subparsers.add_parser('kernel', help='module help')
+    kernel_parser.add_argument('action', choices=('compile','install') )
 
     # all params get passed to mptcp.py ?
     # mptcp_parser  = subparsers.add_parser('mptcp', help='tests help')

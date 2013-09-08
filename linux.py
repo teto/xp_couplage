@@ -21,6 +21,12 @@ class KernelSource:
 
 	#def set_arch() /get_arch
 
+	def compile(self):
+		return subprocess.check_call("make -C "+ self.src_dir + " -j5 all", shell=True)
+
+	def install(self):
+		return subprocess.check_call("make -C "+ self.src_dir + " install", shell=True)
+
 	def compile_module(self, module_dir ):
 		# if not os.path.isdir(module_dir):
 		# 	raise Exception( src_dir + " is not a directory")

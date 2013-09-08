@@ -546,7 +546,7 @@ retry_bind:
 
 		//mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo)
 		loc_in.sin_port = mptcp_get_port_modulo_n( desired_port_modulo , mpcb->number_of_remote_rlocs);
-		mptcp_debug("Generated port %d", loc_in.sin_port);
+		mptcp_debug("Generated port %d\n", loc_in.sin_port);
 	}
 	else
 	{

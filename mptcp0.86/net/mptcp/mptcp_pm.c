@@ -271,19 +271,18 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 	mpcb->used_port_modulos = 0;
 	// GCC extension allows to do 0b00010100
 	mptcp_debug("mpcb->used_port_modulos Before :%d",mpcb->used_port_modulos);
-	// for(iter = 0; iter < desired_number_of_subflows ; ++iter)
-	// {
-	// 	mpcb->used_port_modulos |= (1 << iter );
-	// }
-	mptcp_debug("mpcb->used_port_modulos after: %d", mpcb->used_port_modulos);
+	
 
 	// will set to 1 port modulo already used for each socket already created
 	mptcp_for_each_bit_set(mpcb->loc4_bits,i ){
-//static int mptcp_get_port_modulo_n(int desired_port_rest_after_modulo,int modulo)
+
+		mptcp_debug("%d port used for subflow : %d", mpcb->locaddr4[i].port , i);
 		iter = mpcb->locaddr4[i].port % desired_number_of_subflows;
+		
 		mpcb->used_port_modulos |= (1 << iter);
 
 	}
+	mptcp_debug("mpcb->used_port_modulos after: %d", mpcb->used_port_modulos);
 
 	// for(iter = 0; ){
 
@@ -309,7 +308,7 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 
 		//mpcb->locaddr4[i].desired_port_modulo =  iter % mpcb->number_of_remote_rlocs;
 		// mpcb->locaddr4[i].desired_port_modulo =  iter % mpcb->number_of_remote_rlocs;
-		mptcp_debug("Port modulo set to %d at index %d\n",iter, i);
+		// mptcp_debug("Port modulo set to %d at index %d\n", iter, i);
 		mpcb->locaddr4[i].id = i;
 		// mpcb->locaddr4[i].low_prio = (dev->flags & IFF_MPBACKUP) ?
 		// 				1 : 0;

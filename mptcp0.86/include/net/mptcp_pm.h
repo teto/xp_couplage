@@ -51,7 +51,8 @@
 struct mptcp_loc4 {
 	u8		id;
 	u8		low_prio:1;
-	__be16		port;
+	__be16		port; /* = unsigned short */
+	// int port;
 	struct in_addr	addr;
 
 	// MATT
@@ -118,11 +119,17 @@ eid/token. Should pass a struct with different functions reacting to events etc.
 **/
 typedef int (*mptcp_path_discovery_function_t)(u32,u32)  ;
 
+
+#define MPTCP_DESIRED_NB_OF_SUBFLOWS(mpcb) max(mpcb->cnt_subflows, (int) (mpcb->number_of_remote_rlocs * mpcb->number_of_local_rlocs ) )
+
 int register_mptcp_path_discovery_system(mptcp_path_discovery_function_t fct);
 int unregister_mptcp_path_discovery_system(void);
 
 /** token, local rlocs number, remote rlocs nub **/
 int mptcp_generate_paths(u32 token, u8 , u8);
+
+int mptcp_update_used_modulos(struct mptcp_cb* mpcb);
+
 
 /** additions **/
 void mptcp_path_discovery_worker( struct work_struct *work);

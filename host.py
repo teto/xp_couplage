@@ -131,11 +131,6 @@ if __name__ == '__main__':
     parser.add_argument('config_file', choices=(
                                   'server.ini',
                                   'client.ini',
-                                  # 'tests',
-                                  # 'daemon', 
-                                  # 'module',
-                                  # 'kernel'
-                                  # 'mptcp'
                                   ), 
                       help="Choose")
 
@@ -182,7 +177,7 @@ if __name__ == '__main__':
 
     # first need to compile module
     # config.read(args.config_file)
+    # TODO complete absolute path towards config file
     host = Host( args.config_file )
 
     getattr(host, args.mode)( args.action)
-    #

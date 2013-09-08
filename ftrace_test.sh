@@ -7,12 +7,15 @@ if [ $# -ne 1 ]; then
 	echo " Might be:"
 	echo "iperf -c mptcp.info.ucl.ac.be -t 5"
 	echo "$HOME/xp_couplage/wget_test.sh 153.16.49.120:8000/xpfiles temp 3"
+	# TODO these files often change names for a nmae with current date
+	echo "wget -O - http://multipath-tcp.org/snapshots/mptcp_2013_09_07.tar.gz > /dev/null"
 	exit 1
 fi
 
 CMD="$1"
 debugFolder="/sys/kernel/debug/tracing"
 
+echo -e "To see trace, exec:\nsudo less $debugFolder/trace"
 
 # echo $$ > set_ftrace_pid to trace just this script
 # to clear file

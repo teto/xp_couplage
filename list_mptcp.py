@@ -3,9 +3,11 @@
 # Presentation of /proc/net/tcp here
 #http://lkml.indiana.edu/hypermail/linux/kernel/0409.1/2234.html
 
-import binascii
+import sys
 import struct 
 import socket
+# import configparser
+import argparse
 from collections import OrderedDict
 
 #"id",  
@@ -67,10 +69,8 @@ tcpNames = OrderedDict ( [
 
 # print modulo % ns
 # def maptest(descriptors, values):
-
-
 def convert_tcp_state(state):
-	pass
+	# pass
 	# states = ["Undefined", "TCP_ESTABLISHED",
 	# "TCP_SYN_SENT",
 	# "TCP_SYN_RECV",
@@ -84,23 +84,22 @@ def convert_tcp_state(state):
 	# "TCP_CLOSING"]
 	return int(state)
 
-def describe_timer(value):
-	descriptions= [ "no timer is pending" , 
-	"retransmit-timer is pending" , 
-	"another timer (e.g. delayed ack or keepalive) is pending" ,
-	"TIME_WAIT",
-	"Zero window probe"
+class Entry:
+	def __init__(self,entry):
+		self.entry = entry
 
-	]
-	return descriptions[ value ]
+	def display(self):
+		raise NotImplementedError;
 
 
-def load_entries(file,descriptors):
+
+
+# kind of a csv reader
+def load_entries(file,descriptors, generator ):
 
 	entries = []
 
 	with open(file, newline='') as connections:
-
 
 		# skip first line (title)
 		for line in connections.readlines()[1:]:
@@ -114,14 +113,7 @@ def load_entries(file,descriptors):
 			for i,fn in enumerate(descriptors.values() ):
 				items[i] =  ( fn(items[i]) )
 
-			entry = OrderedDict(zip(descriptors.keys(), items ) )
-	#		print ("After transformations", entry )
-			# 
-			# entry["local address"] = ntoa( entry["local address"])
-			# entry["local port"]		= binascii.unhexlify
-
-			# dict( name, value ) 
-			# for (name,value) in 
+			entry = generator( OrderedDict(zip(descriptors.keys(), items ) ) )
 
 			entries.append ( entry )
 
@@ -130,94 +122,155 @@ def load_entries(file,descriptors):
 
 
 
-mptcpEntries 	= load_entries('/proc/net/mptcp', mptcpNames)
-tcpEntries 		= load_entries('/proc/net/tcp', tcpNames)
+
+class TCPEntry(Entry):
+	def __init__(self,entry):
+		
+		super().__init__(entry)
+
+	# tcpEntry,mptcpEntry
+	def format(self):
+		#{0[local_port]}%{subflows} = {result}
+		return "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} ".format(
+				self.entry,
+				protocol="TCP",
+				# subflows=mptcpEntry["ns"],
+				# result = ( tcpEntry["local_port"]  % mptcpEntry["ns"] )
+				 )
+		
+
+	@staticmethod
+	def load_entries():
+		return load_entries('/proc/net/tcp', tcpNames, TCPEntry )
 
 
-# for tcpEntry in tcpEntries: 
-# # 	pass
-# 	print("tcpEntry", tcpEntry)
 
-# # def associated_subflows():
+#mptcpNames
+
+class MPTCPEntry(Entry):
+
+	def __init__(self,entry):
+		
+		super().__init__(entry)
+
+
+	def format(self):
+		return "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
+						self.entry,
+						protocol="MPTCP"
+						 )
+
+	@staticmethod
+	def load_entries():
+		return load_entries('/proc/net/mptcp', mptcpNames, MPTCPEntry )
+
+
+
+
+
+def describe_timer(value):
+	descriptions= [ "no timer is pending" , 
+	"retransmit-timer is pending" , 
+	"another timer (e.g. delayed ack or keepalive) is pending" ,
+	"TIME_WAIT",
+	"Zero window probe"
+
+	]
+	return descriptions[ value ]
+
+
+
+
+
+
+
+
 
 # class MPTCPEntry():
 
 # == HOW TO FORMAT ==
 # '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
 # where > means "align to right" and 8 is the width for specific value.
-def display_mptcp_entry(entry):
-	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
-					mptcpEntry,
-					protocol="MPTCP"
-					# local_addr=mptcpEntry["local_addr"],
-					# local_port=mptcpEntry["local_port"],
-					# rmt_addr=mptcpEntry["rmt_addr"],
-					# rmt_port=mptcpEntry["rmt_port"],
-					# subflows=mptcpEntry["ns"],
-					# inode=mptcpEntry["inode"]
-					 )
-	)
+# add a 0 in front to fill width with 0s
+# def display_mptcp_entry(entry):
+# 	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
+# 					entry,
+# 					protocol="MPTCP"
+# 					 )
+# 	)
 
-def display_tcp_entry(tcpEntry,mptcpEntry):
+# def display_tcp_entry(tcpEntry,mptcpEntry):
 
-	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} {0[local_port]}%{subflows} = {result}".format(
-			tcpEntry,
-			protocol="TCP",
-			# local_addr=tcpEntry["local_addr"],
-			# local_port=tcpEntry["local_port"],
-			# rmt_addr=tcpEntry["rmt_addr"],
-			# rmt_port=tcpEntry["rmt_port"],
-			subflows=mptcpEntry["ns"],
-			result = ( tcpEntry["local_port"]  % mptcpEntry["ns"] )
-			 )
-	)
-
-for mptcpEntry in mptcpEntries:
-
-	display_mptcp_entry(mptcpEntry)
-	#,value
-	# for key in mptcpEntry:
+# 	print ( "{protocol:>5}: {0[local_addr]:>15}:{0[local_port]:05} -> {0[rmt_addr]:>15}:{0[rmt_port]:05} {0[local_port]}%{subflows} = {result}".format(
+# 			tcpEntry,
+# 			protocol="TCP",
+# 			subflows=mptcpEntry["ns"],
+# 			result = ( tcpEntry["local_port"]  % mptcpEntry["ns"] )
+# 			 )
+# 	)
 
 
-		# print ("Key" , key, ":", value ); #, ":", mptcpEntry[key])
-
-	# print("MPTCP:", mptcpEntry["local address"])
-	for tcpEntry in tcpEntries: 
-	# 	pass
-		# print("tcpEntry", tcpEntry)
-		if tcpEntry["inode"] != mptcpEntry["inode"]:
-			continue
-
-		#print("TCP subflow", tcpEntry["inode"])
-		display_tcp_entry(tcpEntry, mptcpEntry )
-
-# with open('/proc/net/mptcp', newline='') as mptcpConnections:
 
 
-# 	# skip first line (title)
-# 	for mptcpLine in mptcpConnections.readlines()[1:]:
 
-# 		items = mptcpLine.replace(':',' ').split()[1:]
+if __name__ == "__main__":
 
-# 		mptcpSk = dict(zip(tcpNames, items))
+	parser = argparse.ArgumentParser(
+		#description='Handle mptcp kernel module in charge of converting kernel requests into netlink requests '
+		description=""
+		# ,formatter_class=argparse.RawDescriptionHelpFormatter
+		)
 
-# 		with open('/proc/net/tcp', newline='') as tcpConnections:
+	parser.add_argument('mode', choices=(
+								'mptcp',
+								'tcp',
+								),
+							nargs="?",
+							default="mptcp",
+					  help="Choose"
+					  )
 
-# 			for tcpLine in tcpConnections.readlines()[1:]:
+	parser.add_argument('-e', dest="extended",
+							action="store_true",
+							# default="mptcp",
+					  help="Detailed view of the entries"
+					  )
 
-# 				if mptcpSk
+	# parse arguments
+	args = parser.parse_args( sys.argv[1:] )
 
-		# print ( "test ", items["local address"] , items["inode"])
-		# print( "lol?", ntoa(items["local address"]) )
-		# print( "lol?", ntoa(items["local port"]) )
+
+	mptcpEntries 	= MPTCPEntry.load_entries()
+	#mptcpEntries 	= load_entries('/proc/net/mptcp', mptcpNames)
+	#tcpEntries 		= load_entries('/proc/net/tcp', tcpNames)
+	tcpEntries 		= TCPEntry.load_entries()
+
+	print("mode:", args.mode )
+
+	# for tcpEntry in tcpEntries: 
+	# # 	pass
+	# 	print("tcpEntry", tcpEntry.format())
 		
-		# for key,item in enumerate( items ):
-			# print ( "key", key, "item", item );
 
 
-		# with open('/proc/net/tcp', newline='') as sockets:
+	# TODO add a summary (how many MPTCP connections/ subflows)
+	for mptcpEntry in mptcpEntries:
 
+		print( mptcpEntry.format() )
 
-	# spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-	# for row in spamreader:
-	# 	print(', '.join(row))
+		# print("MPTCP:", mptcpEntry["local address"])
+		for tcpEntry in tcpEntries: 
+		# 	pass
+			# print("tcpEntry", tcpEntry)
+			if tcpEntry.entry["inode"] != mptcpEntry.entry["inode"]:
+				continue
+
+			#print("TCP subflow", tcpEntry["inode"])
+			print(tcpEntry.format() + 
+			"{0[local_port]}%{subflows} = {result}".format(
+				tcpEntry.entry,
+	 			subflows=mptcpEntry.entry["ns"],
+				result = ( tcpEntry.entry["local_port"]  % mptcpEntry.entry["ns"] ) 
+					
+				)
+			)

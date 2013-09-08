@@ -76,6 +76,38 @@ spinlock_t mptcp_tk_hashlock;	/* hashtable protection */
 mptcp_path_discovery_function_t mptcp_path_discovery_cb = 0;
 
 
+
+int mptcp_update_used_modulos(struct mptcp_cb* mpcb) 
+{
+	int i = 0;
+	int modulo = 0;
+	int desired_number_of_subflows = MPTCP_DESIRED_NB_OF_SUBFLOWS(mpcb);
+
+	mptcp_debug("Updating used port modulos \n"); //, mpcb->used_port_modulos);
+
+	// reset 
+	mpcb->used_port_modulos = 0;
+	mptcp_for_each_bit_set(mpcb->loc4_bits,i ){
+
+		/* if connection not established yet
+		don't take into account theport number */
+		if(mpcb->locaddr4[i].port == 0){
+			mptcp_debug("Skipping subflow: %d, connection looks not established yet\n", i);
+			continue;
+		}
+
+		mptcp_debug("%d port used for subflow : %d (rest %d)\n", mpcb->locaddr4[i].port , i , mpcb->locaddr4[i].port % desired_number_of_subflows);
+		modulo = mpcb->locaddr4[i].port  % desired_number_of_subflows;
+		
+		// 1 << 0 should be 1
+		mpcb->used_port_modulos |= (1 << modulo );
+	}
+
+	mptcp_debug("to used port modulos %x (hexa)\n", mpcb->used_port_modulos);
+	return mpcb->used_port_modulos;
+}
+
+
 /**
 returns number of remote rlocs x number of local rlocs
 In the future it should be able to change all bitfields , that is set values of subflows for each interface
@@ -205,7 +237,7 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 
 	mptcp_debug("Fullmesh between interfaces, %d local * %d remote =  %d subflows .  \n", nb_of_local_ifs, nb_of_remote_ifs  , nb_of_local_ifs * nb_of_remote_ifs );
 
-
+// = mpcb->number_of_remote_rlocs * mpcb->number_of_local_rlocs;
 	desired_number_of_subflows = max(mpcb->cnt_subflows, number_of_physical_paths );
 
 	mptcp_debug("Want to create %d subflows . %d already exist", desired_number_of_subflows, mpcb->cnt_subflows);
@@ -269,26 +301,32 @@ void mptcp_set_addresses_homemade(struct sock *meta_sk)
 
  	/** fill this bitfield with used moduls */
 	mpcb->used_port_modulos = 0;
+	mptcp_update_used_modulos(mpcb);
 	// GCC extension allows to do 0b00010100
-	mptcp_debug("mpcb->used_port_modulos Before :%d",mpcb->used_port_modulos);
+	// mptcp_debug("mpcb->used_port_modulos Before :%d",mpcb->used_port_modulos);
 	
 
-	// will set to 1 port modulo already used for each socket already created
-	mptcp_for_each_bit_set(mpcb->loc4_bits,i ){
+	// // will set to 1 port modulo already used for each socket already created
+	// 
 
-		mptcp_debug("%d port used for subflow : %d", mpcb->locaddr4[i].port , i);
-		iter = mpcb->locaddr4[i].port % desired_number_of_subflows;
+	// mptcp_for_each_bit_set(mpcb->loc4_bits,i ){
+
+	// 	mptcp_debug("%d port used for subflow : %d", mpcb->locaddr4[i].port , i);
+	// 	iter = mpcb->locaddr4[i].port % desired_number_of_subflows;
 		
-		mpcb->used_port_modulos |= (1 << iter);
+	// 	mpcb->used_port_modulos |= (1 << iter);
 
-	}
-	mptcp_debug("mpcb->used_port_modulos after: %d", mpcb->used_port_modulos);
+	// }
+	// mptcp_debug("mpcb->used_port_modulos after: %d", mpcb->used_port_modulos);
 
 	// for(iter = 0; ){
 
 	// }
 
 	//mptcp_for_each_sk(meta_tp->mpcb, sk_it) {
+	mptcp_debug("Trying to set meta_sk port to its real value. (current value %d).\n",mpcb->locaddr4[0].port);
+	mpcb->locaddr4[0].port = ntohs(inet_sk(mpcb->meta_sk)->inet_sport);
+	mptcp_debug("New value: %d.\n",mpcb->locaddr4[0].port);
 
 	for(iter = 0; iter < number_of_subflows_to_create ; ++iter)
 	{

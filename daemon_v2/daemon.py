@@ -17,7 +17,7 @@ import binascii
 logger = logging.getLogger( __name__ )
 logger.setLevel( logging.DEBUG )
 # logger= logging
-print ("handlers", logger.handlers )
+# print ("handlers", logger.handlers )
 
 handler = logging.StreamHandler()
 #logging.FileHandler('hello.log')

@@ -146,7 +146,7 @@ tcpEntries 		= load_entries('/proc/net/tcp', tcpNames)
 # '{:>12}  {:>12}  {:>12}'.format(word[0], word[1], word[2])
 # where > means "align to right" and 8 is the width for specific value.
 def display_mptcp_entry(entry):
-	print ( "{protocol:>7}: {0[local_addr]:12}:{0[local_port]:5} -> {0[rmt_addr]}:{0[rmt_port]:5} with {0[ns]} subflows. Inode: {0[inode]}".format(
+	print ( "{protocol:>7}: {0[local_addr]:12}:{0[local_port]:5} -> {0[rmt_addr]}:{0[rmt_port]:05} with {0[ns]} subflows. Inode: {0[inode]}".format(
 					mptcpEntry,
 					protocol="MPTCP"
 					# local_addr=mptcpEntry["local_addr"],

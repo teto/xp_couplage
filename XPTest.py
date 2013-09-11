@@ -334,7 +334,7 @@ if __name__ == '__main__':
 	# parser.add_argument('localhost', action="store",help="local ip or hostname")
 	parser.add_argument('remotehost', action="store",help="remote ip or hostname")
 	# define it into config file for now
-	parser.add_argument('remoteport', action="store",type=int, help="ssh port ? in order to launch server")
+	parser.add_argument('remoteport', action="store",type=int,nargs="?", help="ssh port ? in order to launch server")
 	# FileType
 	parser.add_argument('--config-file', type=str,  default="tests.ini", help="Describe experiment settings")
 

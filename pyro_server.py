@@ -47,8 +47,8 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 class PyroServer(Pyro4.Daemon):
 
-	default_daemon_port=4242
-	default_ns_port=4242
+	# default_daemon_port=4242
+	# default_ns_port=4242
 
 
 	def getHostname(self):
@@ -63,7 +63,7 @@ class PyroServer(Pyro4.Daemon):
 	# def look_for_nat():
 	# TODO pass **kwargs
 	# nat_port=None, 
-	def __init__(self, port=default_daemon_port, localhostname=None, nat_host=None, nat_port=None, **kwargs):
+	def __init__(self, port, localhostname=None, nat_host=None, nat_port=None, **kwargs):
 
 		if not localhostname:
 			localhostname = Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)

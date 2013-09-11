@@ -18,7 +18,8 @@ import os
 import threading
 import sys
 import signal 
-
+import socket
+import select
 
 
 logger = logging.getLogger( __name__)
@@ -38,6 +39,7 @@ config.read( "tests.ini")
 def sigint_handler(signum, frame):
 	print( 'Stop pressing the CTRL+C!', frame )
 	daemon.close()
+	exit(1)
 
 signal.signal(signal.SIGINT, sigint_handler)
 
@@ -57,8 +59,11 @@ class PyroServer(Pyro4.Daemon):
 		return res[0], int(res[1])
 
 	def getNatHostname(self):
-		res = self.natLocationStr.split(":");
-		return res[0], int(res[1])
+		print('res',self.natLocationStr)
+		if self.natLocationStr:
+			res = self.natLocationStr.split(":");
+			return res[0], int(res[1])
+		return None,None
 
 	# def look_for_nat():
 	# TODO pass **kwargs
@@ -114,17 +119,18 @@ class PyroServer(Pyro4.Daemon):
 		nat_host, nat_port = self.getNatHostname()
 		# natport=nat_port
 		# Unixsocket
-		(nameserverUri, self.ns_daemon, broadcastServer) = Pyro4.naming.startNS(
+		(nameserverUri, self.ns_daemon, self.broadcastServer) = Pyro4.naming.startNS(
 					host=hostname,
 					# host=hostCfg[0],
 					port=port,
-					unixsocket=False, 
+					#unixsocket=None, 
 					nathost=nat_host,
 					natport=nat_port
 					# **keywords 
 					)
 		print("Nameserver available on Uri %s"%nameserverUri)
-
+		print("ns daemon location string=%s" %self.ns_daemon.locationStr)
+		print("ns daemon sockets=%s" % self.ns_daemon.sockets)
 		# # find the name server
 		# locateNS returns a proxy towards
 		self.ns = Pyro4.core.Proxy( nameserverUri )
@@ -138,8 +144,46 @@ class PyroServer(Pyro4.Daemon):
 	# def register
 	def run(self):
 
-		logger.info("Starting ");
-		self.requestLoop()                  # start the event loop of the server to wait for calls
+		# below is our custom event loop.
+		while True:
+
+			logger.info("Starting ");
+
+
+
+
+			print("Waiting for events...")
+			# create sets of the socket objects we will be waiting on
+			# (a set provides fast lookup compared to a list)
+			nameserverSockets = set(self.ns_daemon.sockets)
+			pyroSockets = set(self.sockets)
+			rs=[self.broadcastServer] # only the broadcast server is directly usable as a select() object
+			# what does that mean ?
+			rs.extend(nameserverSockets)
+			rs.extend(pyroSockets)
+			rs,_,_ = select.select(rs,[],[],3)
+			eventsForNameserver=[]
+			eventsForDaemon=[]
+			for s in rs:
+				if s is self.broadcastServer:
+					print("Broadcast server received a request")
+					broadcastServer.processRequest()
+				elif s in nameserverSockets:
+					eventsForNameserver.append(s)
+				elif s in pyroSockets:
+					eventsForDaemon.append(s)
+				if eventsForNameserver:
+					print("Nameserver received a request")
+					self.ns_daemon.events(eventsForNameserver)
+				if eventsForDaemon:
+					print("Daemon received a request")
+					self.events(eventsForDaemon)
+
+	def __exit__(self):
+		if self.ns_daemon:
+			self.ns_daemon.close()
+		self.close()
+		#self.requestLoop()                  # start the event loop of the server to wait for calls
 
 
 # Pyro4.Daemon.serveSimple(
@@ -202,7 +246,10 @@ if __name__ == '__main__':
 
 	# TODO need to create one parser per optional subcommand
 	# pass it the namespace
-
+    if not Pyro.config.PYRO_MULTITHREADED:
+        print "Sorry, this example requires multithreading."
+        print "Either your Python doesn't support it or it has been disabled in the config."
+        return
 
 
 
@@ -263,7 +310,8 @@ if __name__ == '__main__':
 						)
 
 	use_nameserver = config['pyro'].getboolean("use_nameserver")
-	ns_port = None
+	ns_port = config['pyro'].getint("ns_port")
+
 	if args.ns:
 		logger.info("Asked for a nameserver ...")
 		ns_args = ns_cli_parser(args.ns)
@@ -280,8 +328,10 @@ if __name__ == '__main__':
 	# register the greeting object as a Pyro object
 	localhost = host.Host("server.ini")
 
+	logger.info("Registering host")
 	# TODO ptet ecraser la fonction register
 	uri=daemon.register(localhost)
-	daemon.ns.register(uri)
+	#daemon.ns.register(uri)
+	logger.info("Registering host")
 	# ns=Pyro4.locateNS( host=ip, port=config['pyro'].getint("ns_port") )
 	daemon.run()

@@ -10,6 +10,7 @@ import natutils
 # nameserver hostname
 
 # nat = natutils.look_for_nat()
+
 #
 #NS running on 192.168.1.102:4242 (192.168.1.102)
 #internal URI = PYRO:Pyro.NameServer@192.168.1.102:4242

@@ -11,6 +11,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Will parse a list of strings
+# and returns teh matching namespace
+def nat_cli_parser(args, namespace=None):
+	nat_parser = argparse.ArgumentParser(
+			description='Parse a NAT configuration command line'
+			)
+	nat_parser.add_argument('external_port', action="store",help="remote ip or hostname")
+	nat_parser.add_argument('remote_ip', action="store", help="remote ip or hostname")
+
+	return parser.parse_args( args, namespace)
+
+
+def create_nat_from_cli():
+	pass
+
+
+# nat object knows LocalIp/ExternalIp
+
 
 # Binding for miniupnp
 class Nat:

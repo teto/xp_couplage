@@ -45,34 +45,6 @@ def do_scp(host, rem, loc):
 
 
 
-# def pyro_create_daemon():
-# 	remoteHost=host.Host("client.ini")
-
-
-	
-
-
-
-	# ip= Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
-	# # ip2= Pyro4.socketutil.getInterfaceAddress("eth0")
-	# ip2="null"
-	# print("Trying to bind daemon on ip ", ip, ip2 )
-	# #Pyro4.config
-
-
-	# # make a Pyro daemon, port=0 => random port
-	# daemon=Pyro4.Daemon( host="192.168.1.102", port=4242, natport=4242,nathost="82.121.111.63")
-	# ns=Pyro4.locateNS()                   # find the name server
-	# uri=daemon.register(remoteHost)   		  # register the greeting object as a Pyro object
-	# ns.register("host", uri)  			  # register the object with a name in the name server
-
-	# print ("Registered host:",uri)
-	# print ("Ready.")
-	# daemon.requestLoop()                  # start the event loop of the server to wait for calls
-
-
-
-
 # TODO we could use a pyro uri here
 # to launch a naming server
 #python3 -Wignore -m Pyro4.naming --host 192.168.1.102 --port 4243 --nathost=82.121.111.63 --natport 4243

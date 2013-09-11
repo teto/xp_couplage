@@ -63,7 +63,7 @@ class PyroServer(Pyro4.Daemon):
 	# def look_for_nat():
 	# TODO pass **kwargs
 	# nat_port=None, 
-	def __init__(self, port=default_daemon_port, localhostname=None, nat_host=None, **kwargs):
+	def __init__(self, port=default_daemon_port, localhostname=None, nat_host=None, nat_port=None, **kwargs):
 
 		if not localhostname:
 			localhostname = Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)

@@ -20,6 +20,7 @@ import sys
 import signal 
 import socket
 import select
+from Pyro4 import threadutil
 
 
 logger = logging.getLogger( __name__)
@@ -44,10 +45,45 @@ def sigint_handler(signum, frame):
 signal.signal(signal.SIGINT, sigint_handler)
 
 
+
+
+# MORE ABOUT THreads:
+# http://docs.python.org/3/library/threading.html#module-threading
+# 
+#    A factory function that returns a new event object. An event manages a flag that can be set to true with the set() method and reset to false with the clear() method.
+#    The wait() method blocks until the flag is true.
+class NameServer(threadutil.Thread):
+	def __init__(self, **kwargs):
+		# super(NameServer,self)
+		super().__init__()
+
+		#A thread can be flagged as a “daemon thread”.
+		# The significance of this flag is that the entire Python program exits when only daemon threads are left. The initial value is inherited from the creating thread. 
+		# The flag can be set through the daemon property.
+		self.setDaemon(1)
+		self.args=kwargs
+		self.started=threadutil.Event()
+
+	def run(self):
+		self.uri, self.ns_daemon, self.bc_server = Pyro4.naming.startNS( **self.args)
+		self.started.set()
+		self.ns_daemon.requestLoop()
+
+
+# def startNameServer(host):
+# 	ns=NameServer(host)
+
+# 	# start calls run function in another thread
+# 	ns.start()
+# 	ns.started.wait()
+# 	return ns
+
+
 # can only be set as env var
 # Pyro4.config.LOGLEVEL = DEBUG
-
-class PyroServer(Pyro4.Daemon):
+# 
+# call shutdown
+class PyroServer(threading.Thread):
 
 	# default_daemon_port=4242
 	# default_ns_port=4242
@@ -55,13 +91,13 @@ class PyroServer(Pyro4.Daemon):
 
 	def getHostname(self):
 		# return super().locationStr;
-		res= self.locationStr.split(":");
+		res= self.daemon.locationStr.split(":");
 		return res[0], int(res[1])
 
 	def getNatHostname(self):
-		print('res',self.natLocationStr)
-		if self.natLocationStr:
-			res = self.natLocationStr.split(":");
+		# print('res',self.daemon.natLocationStr)
+		if self.daemon.natLocationStr:
+			res = self.daemon.natLocationStr.split(":");
 			return res[0], int(res[1])
 		return None,None
 
@@ -98,7 +134,11 @@ class PyroServer(Pyro4.Daemon):
 		# daemon=Pyro4.Daemon( host="192.168.1.102", port=4242, natport=4242,nathost="82.121.111.63")
 		# daemon=
 		# logger.info("Launching daemon ")
-		super().__init__( port=port, natport=nat_port, nathost=nat_host, host=localhostname)
+		threading.Thread.__init__(self)
+
+		self.setDaemon(True)
+
+		self.daemon = Pyro4.Daemon( port=port, natport=nat_port, nathost=nat_host, host=localhostname)
 
 		print ( "Hostname configuration", self.getHostname() )
 		print ( "Nat configuration", self.getNatHostname() )
@@ -119,7 +159,9 @@ class PyroServer(Pyro4.Daemon):
 		nat_host, nat_port = self.getNatHostname()
 		# natport=nat_port
 		# Unixsocket
-		(nameserverUri, self.ns_daemon, self.broadcastServer) = Pyro4.naming.startNS(
+		self.ns = NameServer(
+		#(nameserverUri, self.ns_daemon, self.broadcastServer) = Pyro4.naming.startNS
+			
 					host=hostname,
 					# host=hostCfg[0],
 					port=port,
@@ -128,62 +170,76 @@ class PyroServer(Pyro4.Daemon):
 					natport=nat_port
 					# **keywords 
 					)
-		print("Nameserver available on Uri %s"%nameserverUri)
-		print("ns daemon location string=%s" %self.ns_daemon.locationStr)
-		print("ns daemon sockets=%s" % self.ns_daemon.sockets)
+		# print("Nameserver available on Uri %s"%nameserverUri)
+		# print("ns daemon location string=%s" %self.ns_daemon.locationStr)
+		# print("ns daemon sockets=%s" % self.ns_daemon.sockets)
 		# # find the name server
 		# locateNS returns a proxy towards
-		self.ns = Pyro4.core.Proxy( nameserverUri )
+		# Pyro4.core.Proxy( self.getNameServer().uri )
 		# self.ns = Pyro4.locateNS( host=ip, port=config['pyro'].getint("ns_port") )
 		# register the object with a name in the name server
 		# ns.register("host", uri)
 		# print ("Registered host:",uri)
 		print ("Ready.")
+		self.ns.start()
 
 
+	def locateNameServer(self):
+		pass
 	# def register
 	def run(self):
 
 		# below is our custom event loop.
-		while True:
+		# while True:
 
-			logger.info("Starting ");
-
-
+		logger.info("Starting ");
 
 
-			print("Waiting for events...")
-			# create sets of the socket objects we will be waiting on
-			# (a set provides fast lookup compared to a list)
-			nameserverSockets = set(self.ns_daemon.sockets)
-			pyroSockets = set(self.sockets)
-			rs=[self.broadcastServer] # only the broadcast server is directly usable as a select() object
-			# what does that mean ?
-			rs.extend(nameserverSockets)
-			rs.extend(pyroSockets)
-			rs,_,_ = select.select(rs,[],[],3)
-			eventsForNameserver=[]
-			eventsForDaemon=[]
-			for s in rs:
-				if s is self.broadcastServer:
-					print("Broadcast server received a request")
-					broadcastServer.processRequest()
-				elif s in nameserverSockets:
-					eventsForNameserver.append(s)
-				elif s in pyroSockets:
-					eventsForDaemon.append(s)
-				if eventsForNameserver:
-					print("Nameserver received a request")
-					self.ns_daemon.events(eventsForNameserver)
-				if eventsForDaemon:
-					print("Daemon received a request")
-					self.events(eventsForDaemon)
+
+
+		# 	print("Waiting for events...")
+		# 	# create sets of the socket objects we will be waiting on
+		# 	# (a set provides fast lookup compared to a list)
+		# 	nameserverSockets = set(self.ns_daemon.sockets)
+		# 	pyroSockets = set(self.daemon.sockets)
+		# 	rs=[self.broadcastServer] # only the broadcast server is directly usable as a select() object
+		# 	# what does that mean ?
+		# 	rs.extend(nameserverSockets)
+		# 	rs.extend(pyroSockets)
+		# 	rs,_,_ = select.select(rs,[],[],3)
+		# 	eventsForNameserver=[]
+		# 	eventsForDaemon=[]
+		# 	for s in rs:
+		# 		if s is self.broadcastServer:
+		# 			print("Broadcast server received a request")
+		# 			self.broadcastServer.processRequest()
+		# 		elif s in nameserverSockets:
+		# 			eventsForNameserver.append(s)
+		# 		elif s in pyroSockets:
+		# 			eventsForDaemon.append(s)
+		# 		if eventsForNameserver:
+		# 			print("Nameserver received a request")
+		# 			self.getDaemon().events(eventsForNameserver)
+
+		# 		# handle events
+		# 		if eventsForDaemon:
+		# 			print("Daemon received a request")
+		# 			self.getDaemon().events(eventsForDaemon)
+		 # start the event loop of the server to wait for calls
+		self.getDaemon().requestLoop()
+
+
+	def getDaemon(self):
+		return self.daemon
+
+	def getNameServer(self):
+		return self.ns
 
 	def __exit__(self):
-		if self.ns_daemon:
-			self.ns_daemon.close()
-		self.close()
-		#self.requestLoop()                  # start the event loop of the server to wait for calls
+		# if self.ns:
+			# self.ns_daemon.close()
+		#shutdown
+		self.getDaemon().close()
 
 
 # Pyro4.Daemon.serveSimple(
@@ -243,13 +299,16 @@ def ns_cli_parser(args,namespace=None):
 if __name__ == '__main__':
 
 
+	# List of all options there: http://pythonhosted.org/Pyro4/config.html
+	Pyro4.config.COMMTIMEOUT = 60
+	
 
 	# TODO need to create one parser per optional subcommand
 	# pass it the namespace
-    if not Pyro.config.PYRO_MULTITHREADED:
-        print "Sorry, this example requires multithreading."
-        print "Either your Python doesn't support it or it has been disabled in the config."
-        return
+	# if not Pyro4.config.PYRO_MULTITHREADED:
+	# 	print("Sorry, this example requires multithreading.")
+	# 	print("Either your Python doesn't support it or it has been disabled in the config.")
+	# 	exit(1)
 
 
 
@@ -266,23 +325,6 @@ if __name__ == '__main__':
 	parser.add_argument('localhost', action="store", nargs="?", help="local ip or hostname")
 	parser.add_argument('--ns', action="store", nargs="?", help="hello" ) #ns_parser.print_help() )
 	parser.add_argument('--nat', action="store", help="world") #nat_parser.print_help() )
-	#nargs="*",
-	# parser.add_argument('--ns', action="store", nargs="?", help="nameserver parameters")
-	# define it into config file for now
-	# parser.add_argument('remoteport', action="store",type=int, help="ssh port ? in order to launch server")
-# parents=[parent_parser]
-	# subparsers  = parser.add_subparsers(dest="subcommand", title="test", help='sub-command help')
-	# main_subparser = subparsers.add_parser('--ns',help='nameserver external IP or associated hostname')
-	# main_subparser.add_subparsers(dest="subcommand")
-	# ns_parser = subparsers.add_parser('--ns',help='nameserver external IP or associated hostname')
-	# ns_parser.add_argument('extra', nargs = "*", help = 'Other commands')
-	# nat_parser = subparsers.add_parser('external_ip',help='external IP or associated hostname')
-	# nat_parser.add_argument('external_port', action="store",type=int, help="port")
-	# parser.add_argument('extra', nargs = "*", help = 'Other commands')
-	# Actually launch the thing here
-	# config['pyro'].getint("daemon_port")
-	#there must be at most one ?
-	# if config['pyro'].getboolean("use_nameserver"):
 
 	args = parser.parse_args( sys.argv[1:] )
 
@@ -304,7 +346,7 @@ if __name__ == '__main__':
 	print("nathost: " , nat_host)
 	# print("ns: " , args.ns_port )
 
-	daemon = PyroServer( 
+	server = PyroServer( 
 				port= config['pyro'].getint("daemon_port")
 					#localhostname=args.localhost,
 						)
@@ -323,15 +365,29 @@ if __name__ == '__main__':
 
 	#there must be at most one ?
 	if use_nameserver:
-		daemon.startNameServer(port= ns_port )
+		server.startNameServer(port= ns_port )
+
+
+
+	server.start()
 
 	# register the greeting object as a Pyro object
-	localhost = host.Host("server.ini")
+	localhost = host.Host("client.ini")
 
 	logger.info("Registering host")
-	# TODO ptet ecraser la fonction register
-	uri=daemon.register(localhost)
-	#daemon.ns.register(uri)
-	logger.info("Registering host")
-	# ns=Pyro4.locateNS( host=ip, port=config['pyro'].getint("ns_port") )
-	daemon.run()
+	# # TODO ptet ecraser la fonction register
+	uri=server.getDaemon().register(localhost)
+	
+	print("uri", uri)
+	# 
+	ip =server.getHostname()[0]
+	ns=Pyro4.locateNS( host=ip, port=ns_port )
+	# uri = 
+	ns.register("host", uri)
+
+
+	logger.info("Host registered. New uri %s"% uri)
+	#
+
+	server.run()
+

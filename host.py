@@ -134,12 +134,15 @@ if __name__ == '__main__':
                                   ), 
                       help="Choose")
 
-    subparsers    = parser.add_subparsers(dest="mode", help='sub-command help')
+    subparsers    = parser.add_subparsers(
+                        dest="mode", help='sub-command help',
+                        title='Subcommands'
+                        )
     daemon_parser = subparsers.add_parser('daemon',help='daemon help')
     daemon_parser.add_argument('action', choices=('compile','start','stop'), action="store")
     # daemon_parser.set_defaults(func=handle_daemon)
 
-    module_parser = subparsers.add_parser('module', help='module help')
+    module_parser = subparsers.add_parser(help='module help')
     module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
     # module_parser.set_defaults(func=handle_module)
 

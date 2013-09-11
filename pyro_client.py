@@ -7,7 +7,6 @@ import Pyro4
 
 # name=input("What ? ").strip()
 # nameserver hostname
-<<<<<<< HEAD
 
 # #
 #

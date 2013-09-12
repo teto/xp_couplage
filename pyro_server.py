@@ -322,7 +322,8 @@ if __name__ == '__main__':
 
 	# should give the opportunity to override settings
 
-	parser.add_argument('remotehost', action="store",help="remote ip or hostname")
+	parser.add_argument('hostconfigfile', action="store", type=argparse.FileType('r'), help="remote ip or hostname")
+
 	parser.add_argument('localhost', action="store", nargs="?", help="local ip or hostname")
 	parser.add_argument('--ns', action="store", nargs="?", help="hello" ) #ns_parser.print_help() )
 	parser.add_argument('--nat', action="store", help="world") #nat_parser.print_help() )
@@ -340,7 +341,7 @@ if __name__ == '__main__':
 		nat_host = nat_args.external_host
 
 
-	print("Remote Hostname: " , args.remotehost )
+	#print("Remote Hostname: " , args.remotehost )
 	# print("Local Hostname: " , args.localhost )
 
 	print("natport: " , nat_port)
@@ -373,7 +374,7 @@ if __name__ == '__main__':
 	server.start()
 
 	# register the greeting object as a Pyro object
-	localhost = host.Host("client.ini")
+	localhost = host.Host( args.hostconfigfile)
 
 	logger.info("Registering host")
 	# # TODO ptet ecraser la fonction register

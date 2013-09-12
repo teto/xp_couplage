@@ -163,9 +163,6 @@ class XPTest:
 				logger.info("Downloading file %s", fileToDownload)
 					
 				output = subprocess.check_output(
-					#$size
-					# TODO set url
-					# .79.141.8.227
 					"/usr/bin time  -f  \"%e\" wget -q -O - "+fileToDownload+" > /dev/null",
 					shell=True
 					);
@@ -286,11 +283,11 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 
 	uri=None
 	# ns = None
-	if config["pyro"].getboolean("use_nameserver"):
+	if config.getboolean("pyro","use_nameserver"):
 		
 		ns_port = config.getint("pyro","ns_port");
 		# TODO check it works
-		logger.info("locating nameserver at %s %s",remotehostname, ns_port )
+		logger.info("locating nameserver at %s %s"%(remotehostname, ns_port) )
 		try:
 			ns = Pyro4.locateNS( host=remotehostname, port= ns_port )
 			uri = ns.lookup("host")

@@ -20,102 +20,102 @@ class Interface:
 # we should be able to add ability to the host 
 # every ability should be self documented 
 class Host:
-    #, port
-    def __init__(self, configFile):
-	# self.address = address
-	self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
+	#, port
+	def __init__(self, configFile):
+		# self.address = address
+		self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
 
-	# set variable MainDir in config file
-	mainDir = os.path.realpath( os.path.dirname(__file__) ) 
-	self.config.set("DEFAULT", "MainDir", mainDir )
+		# set variable MainDir in config file
+		mainDir = os.path.realpath( os.path.dirname(__file__) ) 
+		self.config.set("DEFAULT", "MainDir", mainDir )
 
-	logging.info("Loading file "+config_file+" with as default MainDir="+ mainDir)
+		logging.info("Loading file "+config_file+" with as default MainDir="+ mainDir)
 
-	# first need to compile module
-	self.config.read(configFile)
+		# first need to compile module
+		self.config.read(configFile)
 
-	self.kernel = linux.KernelSource( self.config['kernel']['src'] );
+		self.kernel = linux.KernelSource( self.config['kernel']['src'] );
 
-	self.router = lispmob.LISPmob( self.config['lispmob']['src'], self.config['lispmob']['bin'], self.config['lispmob']['config'])
+		self.router = lispmob.LISPmob( self.config['lispmob']['src'], self.config['lispmob']['bin'], self.config['lispmob']['config'])
 
-	self.mod = linux.InstalledModule( self.config['module']['bin'])
-	    #,self.config['module']['src'] )
+		self.mod = linux.InstalledModule( self.config['module']['bin'])
+			#,self.config['module']['src'] )
 
-	self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
-	#self.port 
+		self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
+		#self.port 
 
-    def getEID(self):
-	return self.config["network"]["eid"]
+	def getEID(self):
+		return self.config["network"]["eid"]
 
-    def getIp(self):
-	return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
+	def getIp(self):
+		return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
 
-    # TODO should use pyroute2 
-    # or libnl python wrapper 
-    def getInterfaces(self):
-	pass
-
-
-    """ ping timeouts after 3 sec"""
-    def ping(self, remotehost):
-	return (os.system("ping -w 2 "+ remotehost ) == 0)
-
-    """ for testing purposes """
-    def echo(self,msg):
-	print(msg)
+	# TODO should use pyroute2 
+	# or libnl python wrapper 
+	def getInterfaces(self):
+		pass
 
 
-    def mptcp_set_state(self,state):
-	return mptcp.MPTCP.set_global_state(state)
+	""" ping timeouts after 3 sec"""
+	def ping(self, remotehost):
+		return (os.system("ping -w 2 "+ remotehost ) == 0)
 
-    # should check if it's in its abilities
-    # def __call__():
+	""" for testing purposes """
+	def echo(self,msg):
+		print(msg)
 
-    def lispmob(self,action):
-	return getattr(self.router,action)();
 
-    def kernel(self,action):
-	return getattr(self.kernel,action)();
+	def mptcp_set_state(self,state):
+		return mptcp.MPTCP.set_global_state(state)
 
-    def daemon(self,action):
-	print ("daemon subparser:", action );
-	#daemon = lispmob.Program();
-	# special usecase
-	if action == "compile":
-	    cmd = "{1}/build.sh {2} {1} {0}".format(
-			self.config['daemon']['bin'],
-			self.config['daemon']['src'],
-			self.config['kernel']['src']) 
-	    return subprocess.check_call( cmd ,shell=True)
-	else:
-	    return getattr(self.lisp_daemon,action)();
+	# should check if it's in its abilities
+	# def __call__():
+
+	def lispmob(self,action):
+		return getattr(self.router,action)();
+
+	def kernel(self,action):
+		return getattr(self.kernel,action)();
+
+	def daemon(self,action):
+		print ("daemon subparser:", action );
+		#daemon = lispmob.Program();
+		# special usecase
+		if action == "compile":
+			cmd = "{1}/build.sh {2} {1} {0}".format(
+				self.config['daemon']['bin'],
+				self.config['daemon']['src'],
+				self.config['kernel']['src']) 
+			return subprocess.check_call( cmd ,shell=True)
+		else:
+			return getattr(self.lisp_daemon,action)();
 
 
 
 	#     
-	    
+		
 	# elif action == "load":
 	#     return subprocess.check_call("sudo "+ self.config['daemon']['bin'])
 	# else:
 	#     #
 	#     return os.system("sudo killall -r lig_daemon*)")
 
-    def module(self,action):
+	def module(self,action):
 
-	print("Handling module with action:" + action);
+		print("Handling module with action:" + action);
 
-	
-	if action == "compile":
-	    kernel = linux.KernelSource( self.config['kernel']['src']);
-	
-	    kernel.compile_module( self.config['module']['src'])
-	    kernel.install_module( self.config['module']['src'])
-	elif action == "load":
-	    self.mod.load()
-	else:
-	    self.mod.unload()
+		
+		if action == "compile":
+			kernel = linux.KernelSource( self.config['kernel']['src']);
+		
+			kernel.compile_module( self.config['module']['src'])
+			kernel.install_module( self.config['module']['src'])
+		elif action == "load":
+			self.mod.load()
+		else:
+			self.mod.unload()
 
-	print ("Module loaded ", self.mod.is_loaded())
+		print ("Module loaded ", self.mod.is_loaded())
 
 
 
@@ -123,67 +123,67 @@ class Host:
 # TODO move the parser here
 # in case script is called directly
 if __name__ == '__main__':
-    
-    # run tests
-    parser = argparse.ArgumentParser(
+	
+	# run tests
+	parser = argparse.ArgumentParser(
 	#description='Handle mptcp kernel module in charge of converting kernel requests into netlink requests '
 	description='Will run tests you precise'
 	)
 
-    #there must be at most one ?
-    parser.add_argument('config_file', choices=(
+	#there must be at most one ?
+	parser.add_argument('config_file', choices=(
 				  'server.ini',
 				  'client.ini',
 				  ), 
-		      help="Choose")
+			  help="Choose")
 
-    subparsers	  = parser.add_subparsers(
+	subparsers	  = parser.add_subparsers(
 			dest="mode", help='sub-command help',
 			title='Subcommands'
 			)
-    daemon_parser = subparsers.add_parser('daemon',help='daemon help')
-    daemon_parser.add_argument('action', choices=('compile','start','stop'), action="store")
-    # daemon_parser.set_defaults(func=handle_daemon)
+	daemon_parser = subparsers.add_parser('daemon',help='daemon help')
+	daemon_parser.add_argument('action', choices=('compile','start','stop'), action="store")
+	# daemon_parser.set_defaults(func=handle_daemon)
 
-    module_parser = subparsers.add_parser(help='module help')
-    module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
-    # module_parser.set_defaults(func=handle_module)
+	module_parser = subparsers.add_parser(help='module help')
+	module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
+	# module_parser.set_defaults(func=handle_module)
 
-    kernel_parser = subparsers.add_parser('kernel', help='module help')
-    kernel_parser.add_argument('action', choices=('compile','install') )
+	kernel_parser = subparsers.add_parser('kernel', help='module help')
+	kernel_parser.add_argument('action', choices=('compile','install') )
 
-    # all params get passed to mptcp.py ?
-    # mptcp_parser  = subparsers.add_parser('mptcp', help='tests help')
-    # mptcp_parser.add_argument('params',nargs="*")
+	# all params get passed to mptcp.py ?
+	# mptcp_parser  = subparsers.add_parser('mptcp', help='tests help')
+	# mptcp_parser.add_argument('params',nargs="*")
 
-    # generate choices from available methods
-    #print ( "sys.module" ,sys.modules["lispmob"].__class__)
-    # print ( "dir" ,dir (lispmob.lispmob) )
-    # # print ( "test:",  lispmob.lispmob.__dir__() )
-    # lisp_choices = members = inspect.getmembers( lispmob.lispmob, inspect.ismethod);
-    # print( 'lisp_choices', lisp_choices )
+	# generate choices from available methods
+	#print ( "sys.module" ,sys.modules["lispmob"].__class__)
+	# print ( "dir" ,dir (lispmob.lispmob) )
+	# # print ( "test:",  lispmob.lispmob.__dir__() )
+	# lisp_choices = members = inspect.getmembers( lispmob.lispmob, inspect.ismethod);
+	# print( 'lisp_choices', lisp_choices )
 
-    lispmob_parser  = subparsers.add_parser('lispmob', help='tests help')
-    lispmob_parser.add_argument('action', 
+	lispmob_parser  = subparsers.add_parser('lispmob', help='tests help')
+	lispmob_parser.add_argument('action', 
 	choices=('build','start','stop','is_running') 
 	# choices=lisp_choices
 	)
-    # lispmob_parser.set_defaults(func=handle_lispmob)
+	# lispmob_parser.set_defaults(func=handle_lispmob)
 
 
-    # parse arguments
-    args = parser.parse_args( sys.argv[1:] )
+	# parse arguments
+	args = parser.parse_args( sys.argv[1:] )
 
 
 
-    # config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
+	# config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
 
-    # set variable MainDir in config file	
-    # config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__))  )
+	# set variable MainDir in config file	
+	# config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__))  )
 
-    # first need to compile module
-    # config.read(args.config_file)
-    # TODO complete absolute path towards config file
-    host = Host( args.config_file )
+	# first need to compile module
+	# config.read(args.config_file)
+	# TODO complete absolute path towards config file
+	host = Host( args.config_file )
 
-    getattr(host, args.mode)( args.action)
+	getattr(host, args.mode)( args.action)

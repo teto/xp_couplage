@@ -10,7 +10,7 @@ import os
 import subprocess
 import linux
 import Pyro4
-
+import logging
 
 class Interface:
 	def __init__(self):
@@ -29,10 +29,11 @@ class Host:
 		mainDir = os.path.realpath( os.path.dirname(__file__) ) 
 		self.config.set("DEFAULT", "MainDir", mainDir )
 
-		logging.info("Loading file "+config_file+" with as default MainDir="+ mainDir)
+		logging.info("Loading file  with as default MainDir="+ mainDir)
 
 		# first need to compile module
-		self.config.read(configFile)
+		#self.config.read(configFile)
+		self.config.read_file(configFile)
 
 		self.kernel = linux.KernelSource( self.config['kernel']['src'] );
 

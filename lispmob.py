@@ -317,6 +317,9 @@ def worker_process(config):
 		logger.log(lvl, 'Message no. %d', i)
 	time.sleep(0.01)
 
+
+
+
 if __name__ == "__main__":
 	q = Queue()
 	stop_event = Event()

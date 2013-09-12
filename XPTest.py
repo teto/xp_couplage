@@ -68,16 +68,18 @@ class XPTest:
 
 		# replace by enable (True/False) ?
 		if enable_lisp:
-			self.localhost.router.start();
+			(self.localhost.router).start();
 			self.remotehost.router.start();
 		else:
-			self.localhost.router.stop();
-			self.remotehost.router.stop();
+			# (self.localhost.router).stop();
+			self.localhost.lispmob("stop")
+			self.remotehost.lispmob("stop")
+			# self.remotehost.router.stop();
 
 
 		# TODO check routes are ok 
-		self.localhost.set_mptcp_state(enable_mptcp);
-		self.remotehost.set_mptcp_state(enable_mptcp);
+		self.localhost.mptcp_set_state(enable_mptcp);
+		self.remotehost.mptcp_set_state(enable_mptcp);
 
 	# run a command locally
 	# def local(self, cmd):
@@ -97,17 +99,19 @@ class XPTest:
 		return self.localhost.ping( self.remotehost.getIp() )
 		#return subprocess.call("ping ") ;
 
+
+
 	# should be called from each child 
 	# before launching tests
 	def prepare(self):
 		# check if folder exists
 		dirname = "./results"
-		if not os.path.isdir(self.name) :
+		if not os.path.isdir(dirname) :
 			# if os.path.exists( self.name ):
 			# 	logging.error("Directory {0} already exists", dirname )
 			# 	return False;
 			# else:
-			if not os.mkdir(dirname ):
+			if not os.mkdir( dirname ):
 				logger.error("Could not create directory '%s' already exists"% dirname )
 				return False;
 
@@ -134,15 +138,21 @@ class XPTest:
 
 		# TODO need to open the file where to register results
 		now = datetime.datetime.now()
-		resultFilename = "./results/"+self.name+"_"+ now.month + now.day + "_" + now.hour +"_"+now.minute+".data";
+		#%Y for year
+		resultFilename = now.strftime("./results/"+self.name+"_%m%d_%h%m")
+		# resultFilename = "./results/"+self.name+"_"+ now.month + now.day + "_" + now.hour +"_"+now.minute+".data";
 
+		logger.info("Trying to open file %s"%resultFilename)
 		# should truncate file
 		f = open(resultFilename,"w+")
 
 		# range start/stop/step
-		blockSize= self.config["xp"]["blockSize"]
-		maxSize	 = self.config["xp"]["maxFileSize"]
-		max_repeat = self.config["xp"]["repeat"]
+		blockSize= self.config.getint("xp","blockSize")
+		maxSize	 = self.config.getint("xp","maxFileSize")
+		max_repeat = self.config.getint("xp","repeat")
+
+		logger.info( "Using block size {0} with max size of {1}".format(blockSize,maxSize) )
+
 		for x in range(blockSize, maxSize, blockSize ):
 			# list of results per size
 			results = [ ]
@@ -278,7 +288,7 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# ns = None
 	if config["pyro"].getboolean("use_nameserver"):
 		
-		ns_port = config["pyro"].getint("ns_port");
+		ns_port = config.getint("pyro","ns_port");
 		# TODO check it works
 		logger.info("locating nameserver at %s %s",remotehostname, ns_port )
 		try:
@@ -295,12 +305,13 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# TODO handle that error case
 	remotehost = Pyro4.Proxy(uri)
 
-
-	test = getattr( sys.modules[__name__], test_name)( settings_file, localhost,remotehost );
+	# instanciate test class XPTest
+	# settings_file
+	test = getattr( sys.modules[__name__], test_name)( config, localhost,remotehost );
 	print ("Prelaunching operations");
 	if not test.prepare():
-		print ( "Test '"+ test.name + "' failed")
-		return
+		logger.error ( "Test '"+ test.name + "' failed")
+		return False
 
 	test.launch()
 	# test.process_results()

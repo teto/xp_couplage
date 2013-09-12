@@ -39,12 +39,13 @@ config.read( "tests.ini")
 
 def sigint_handler(signum, frame):
 	print( 'Stop pressing the CTRL+C!', frame )
-	daemon.close()
+	# server.close()
 	exit(1)
 
 signal.signal(signal.SIGINT, sigint_handler)
 
 
+Pyro4.config.SOCK_REUSE = True
 
 
 # MORE ABOUT THreads:
@@ -300,7 +301,7 @@ if __name__ == '__main__':
 
 
 	# List of all options there: http://pythonhosted.org/Pyro4/config.html
-	Pyro4.config.COMMTIMEOUT = 60
+	# Pyro4.config.COMMTIMEOUT = 60
 	
 
 	# TODO need to create one parser per optional subcommand

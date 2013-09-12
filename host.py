@@ -55,7 +55,7 @@ class Host:
 
     """ ping timeouts after 3 sec"""
     def ping(self, remotehost):
-        return (os.system("ping -w 3 "+ remotehost ) == 0)
+        return (os.system("ping -w 2 "+ remotehost ) == 0)
 
     """ for testing purposes """
     def echo(self,msg):

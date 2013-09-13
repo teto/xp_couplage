@@ -23,6 +23,9 @@ Pyro4.config.COMMTIMEOUT = 3
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+MainDir = os.path.realpath( os.path.dirname( __file__ ))
+
+
 # TODO replace with external libraries such as Fabric or paramiko or spur etc...
 # ServerAliveInterval X sends information every X sec to keep the connection alive
 # ServerAliveCountMax X tells the client to kill the connection after X timeouts
@@ -43,6 +46,24 @@ def do_ssh_back(host, cmd):
 def do_scp(host, rem, loc):
     return os.system("scp root@"+host+":"+rem+" "+loc)
 
+
+
+def check_for_folder(dirname):
+	# check if folder exists
+	# dirname = "./results"
+	
+	if os.path.exists( dirname ):
+		if os.path.isdir(dirname) :
+			return True;
+		else:
+			return False
+	# 	logging.error("Directory {0} already exists", dirname )
+	# makedirs is recursive, contrary to mkdir
+	elif not os.makedirs( dirname ,exist_ok=True):
+		logger.error("Could not create directory '%s'"% dirname )
+		return False;
+
+	return True
 
 
 # TODO we could use a pyro uri here
@@ -90,6 +111,15 @@ class XPTest:
 
 	# run a command remotely
 
+	# computes the filename where to register results
+	def getResultsFilename(self):
+		# TODO need to open the file where to register results
+		now = datetime.datetime.now()
+		#%Y for year , %H for hour (24h), %M for padded minute
+		resultFilename = now.strftime(MainDir+"/results/"+self.name+"_%d%m_%H%M.data")
+
+		return resultFilename
+
 
 	# def download_file():
 	def check_connectivity(self):
@@ -99,23 +129,68 @@ class XPTest:
 		return self.localhost.ping( self.remotehost.getIp() )
 		#return subprocess.call("ping ") ;
 
+	# pass a callback , fn ?
+	def generateTestFileSizes(self):
+		
+
+		blockSize= self.config.getint("xp","blockSize")
+		maxSize	 = self.config.getint("xp","maxFileSize")
+		max_repeat = self.config.getint("xp","repeat")
+
+		return range(blockSize, maxSize, blockSize )
+
+
+
+
+	def generateTestFiles(self):
+		filesFolder = self.config["xp"]["files_folder"]
+
+		if not check_for_folder(filesFolder):
+			return False
+
+		logger.info("generating files to download for XP into %s"%filesFolder )
+		# what happens if files already exist ?
+		
+		blockSize= self.config.getint("xp","blockSize")
+		# maxSize	 = self.config.getint("xp","maxFileSize")
+		# max_repeat = self.config.getint("xp","repeat")
+		temp = self.generateTestFileSizes()
+		print ("temp", temp)
+		print ("block size ",blockSize)
+		for size in temp:
+			res = subprocess.call(["dd","if=/dev/urandom" ,
+						"of={folder}/{fileSize}.bin".format(folder=filesFolder, fileSize=size),
+						# "bs=\"%dk\""%blockSize,
+						"bs=%dk"%blockSize,
+						"count=%d"%(size/blockSize)
+						],
+						# stdout=subprocess.STDOUT,
+						# stderr=subprocess.STDOUT
+						);
+			if res:
+				print("error while creating test file");
+				return False
+
+		return True
+
+
+
+
 
 
 	# should be called from each child 
 	# before launching tests
 	def prepare(self):
 		# check if folder exists
-		dirname = "./results"
-		if not os.path.isdir(dirname) :
-			# if os.path.exists( self.name ):
-			# 	logging.error("Directory {0} already exists", dirname )
-			# 	return False;
-			# else:
-			if not os.mkdir( dirname ):
-				logger.error("Could not create directory '%s' already exists"% dirname )
-				return False;
+		dirname = self.config["results"]["folder"]
+		if not check_for_folder(dirname):
+			return False
 
-		return self.check_connectivity();
+		# if self.check_connectivity() != 0:
+		# 	return False
+
+		# return self.generateTestFiles()
+		return True
 
 
 	def run_unit_test():
@@ -136,13 +211,12 @@ class XPTest:
 		# then aggregate everything into subfolder !
 		# with tempfile.TemporaryDirectory() as tmpdirname:
 
-		# TODO need to open the file where to register results
-		now = datetime.datetime.now()
-		#%Y for year
-		resultFilename = now.strftime("./results/"+self.name+"_%m%d_%h%m")
+
 		# resultFilename = "./results/"+self.name+"_"+ now.month + now.day + "_" + now.hour +"_"+now.minute+".data";
 
-		logger.info("Trying to open file %s"%resultFilename)
+		resultFilename = self.getResultsFilename()
+
+		logger.info("Opening file %s"%resultFilename)
 		# should truncate file
 		f = open(resultFilename,"w+")
 
@@ -153,41 +227,59 @@ class XPTest:
 
 		logger.info( "Using block size {0} with max size of {1}".format(blockSize,maxSize) )
 
-		for x in range(blockSize, maxSize, blockSize ):
+		#range(blockSize, maxSize, blockSize )
+		for fileSize in self.generateTestFileSizes():
 			# list of results per size
 			results = [ ]
 			computedValues= [ ]
-			for currentSize in range(1,max_repeat):
+			for iteration in range(1,max_repeat):
 
-				fileToDownload= "http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]+"/"+str(currentSize)+".bin";
+				fileToDownload=self.config["xp"]["files_url"] +"/"+str(fileSize)+".bin";
+				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
 				logger.info("Downloading file %s", fileToDownload)
 					
-				output = subprocess.check_output(
-					"/usr/bin time  -f  \"%e\" wget -q -O - "+fileToDownload+" > /dev/null",
-					shell=True
-					);
-				# append exection time
-				results.append( output.decode() )
+				try:
+					# will produce sthg like
+					#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
+					# be careful
+					# time utility sends its output on stderr by default
+					time = subprocess.check_output(
+						["/usr/bin/time", 
+						"-f", # to specify format
+						"'%e'" , # elapsed time
+						"wget",
+						 "-q",
+						 "-O",
+						 "/dev/null",
+						 # " - ",
+						 fileToDownload
+						#, shell=True
+						],
+						stderr=subprocess.STDOUT
+						);
+					# append exection time.decode()
+					print("Result %s"%time.decode() )
+					results.append( time.decode() )
+				except subprocess.CalledProcessError as e:
+					logger.error("Error while executing command %s"%e.output);
+					return False
 
 
-
-			# sort it to make it easier
-			results.sort()
-			# append at the end the results
-			# add average/min/max at the end
-			computedValues.append( math.fsum(results)/ results.len() )
-			
-			
-			computedValues.append(  results.min() )
-			computedValues.append(  results.max() )
-
-			# prepend filesize
-			# result.insert(0, currentSize)
-			# TODO would be better to prepend
-			results.append( computedValues )
-			# result.insert(1,average)
-			# result.insert(2,minimum)
-			# result.insert(3,maximum)
+# TODO move that elsewhere, leave it to a script for instance
+			# # sort it to make it easier
+			# results.sort()
+			# # append at the end the results
+			# # add average/min/max at the end
+			# computedValues.append( math.fsum(results)/ results.len() )
+			# computedValues.append(  results.min() )
+			# computedValues.append(  results.max() )
+			# # prepend filesize
+			# # result.insert(0, currentSize)
+			# # TODO would be better to prepend
+			# results.append( computedValues )
+			# # result.insert(1,average)
+			# # result.insert(2,minimum)
+			# # result.insert(3,maximum)
 
 			# for debug
 			print("REsult",results )
@@ -263,7 +355,9 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 
 	# use nat ?
 	# set variable MainDir in config file
-	config.set( "DEFAULT", "MainDir", os.path.realpath( os.path.dirname( __file__ )))
+	config.set( "DEFAULT", "MainDir", MainDir )
+	config.set( "DEFAULT", "XPName", test_name )
+	config.set( "DEFAULT", "hostname", remotehostname )
 
 
 	# first need to compile module
@@ -307,10 +401,12 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	test = getattr( sys.modules[__name__], test_name)( config, localhost,remotehost );
 	print ("Prelaunching operations");
 	if not test.prepare():
-		logger.error ( "Test '"+ test.name + "' failed")
+		logger.error ( "failed preparing test '"+ test.name + "' ")
 		return False
 
-	test.launch()
+	# rename to run
+	if not test.launch():
+		logger.error ( "failed running test '"+ test.name + "' ")
 	# test.process_results()
 
 	# TODO

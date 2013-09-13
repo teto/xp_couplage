@@ -15,7 +15,7 @@ fi
 
 if [ ! -d "$folder" ]; then
 
-	mkdir $folder
+	mkdir "$folder"
 fi
 
 #rm -R $folder/*

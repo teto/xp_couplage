@@ -11,6 +11,10 @@ import subprocess
 import linux
 import Pyro4
 import logging
+import io
+
+logger = logging.getLogger( __name__ )
+logger.setLevel(logging.DEBUG)
 
 class Interface:
 	def __init__(self):
@@ -21,19 +25,46 @@ class Interface:
 # every ability should be self documented 
 class Host:
 	#, port
-	def __init__(self, configFile):
+
+	# @staticmethod
+	# def 
+
+	# config might be of several types
+	def __init__(self, config):
 		# self.address = address
-		self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
-
-		# set variable MainDir in config file
 		mainDir = os.path.realpath( os.path.dirname(__file__) ) 
-		self.config.set("DEFAULT", "MainDir", mainDir )
-
 		logging.info("Loading file  with as default MainDir="+ mainDir)
+		
+		# if already loaded as a config parser instance
+		# if isinstance(configFile, configparser.ConfigParser ):
+		# 	logger.warning("Config should already be loaded")
+		# 	self.config = config
+
+		# else:
+			# need to instantiate
+		self.config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
+		# set variable MainDir in config file
+
+		self.config.set("DEFAULT", "MainDir", mainDir )
+		# if we gave the config filename
+		if type(config) is str: 
+			
+			self.config.read(config)
+
+		elif isinstance(config, io.TextIOWrapper):
+			logger.info("Config file already opened")
+			self.config.read_file(config)
+		else:
+			logger.error("Invalid filetype for config: %s"%type(config))
+			return 
+
+
+
+
 
 		# first need to compile module
-		#self.config.read(configFile)
-		self.config.read_file(configFile)
+		#
+
 
 		self.kernel = linux.KernelSource( self.config['kernel']['src'] );
 
@@ -58,8 +89,10 @@ class Host:
 
 
 	""" ping timeouts after 3 sec"""
-	def ping(self, remotehost):
-		return (os.system("ping -w 2 "+ remotehost ) == 0)
+	def ping(self, remotehost,timeout=None):
+		timeout = timeout if timeout else 1
+		return subprocess.check_call( [ "ping","-w",str(timeout),remotehost])
+		# return (os.system("ping -w 2 "+ remotehost ) == 0)
 
 	""" for testing purposes """
 	def echo(self,msg):

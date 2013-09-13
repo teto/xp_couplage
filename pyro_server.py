@@ -26,6 +26,7 @@ from Pyro4 import threadutil
 logger = logging.getLogger( __name__)
 logger.setLevel(logging.DEBUG)
 
+
 # self.address = address
 config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
 
@@ -46,6 +47,7 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 
 Pyro4.config.SOCK_REUSE = True
+# Pyro4.config.SOCK_REUSE = True
 
 
 # MORE ABOUT THreads:
@@ -68,6 +70,7 @@ class NameServer(threadutil.Thread):
 	def run(self):
 		self.uri, self.ns_daemon, self.bc_server = Pyro4.naming.startNS( **self.args)
 		self.started.set()
+		logger.info("Starting nameserver %s NAt: %s"%(self.ns_daemon.locationStr,self.ns_daemon.natLocationStr))
 		self.ns_daemon.requestLoop()
 
 
@@ -181,7 +184,7 @@ class PyroServer(threading.Thread):
 		# register the object with a name in the name server
 		# ns.register("host", uri)
 		# print ("Registered host:",uri)
-		print ("Ready.")
+		print ("Ready" )
 		self.ns.start()
 
 

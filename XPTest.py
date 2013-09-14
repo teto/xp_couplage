@@ -14,8 +14,9 @@ import configparser
 import os
 import subprocess
 import Pyro4
-import math
+# import math
 import datetime
+import csv
 
 # timeout before locateNS failure 
 Pyro4.config.COMMTIMEOUT = 3
@@ -116,7 +117,7 @@ class XPTest:
 		# TODO need to open the file where to register results
 		now = datetime.datetime.now()
 		#%Y for year , %H for hour (24h), %M for padded minute
-		resultFilename = now.strftime(MainDir+"/results/"+self.name+"_%d%m_%H%M.data")
+		resultFilename = now.strftime(MainDir+"/results/"+self.name+"_%d%m_%H%M.csv")
 
 		return resultFilename
 
@@ -218,7 +219,7 @@ class XPTest:
 
 		logger.info("Opening file %s"%resultFilename)
 		# should truncate file
-		f = open(resultFilename,"w+")
+		# f = open(resultFilename,"w+")
 
 		# range start/stop/step
 		blockSize= self.config.getint("xp","blockSize")
@@ -227,68 +228,89 @@ class XPTest:
 
 		logger.info( "Using block size {0} with max size of {1}".format(blockSize,maxSize) )
 
-		#range(blockSize, maxSize, blockSize )
-		for fileSize in self.generateTestFileSizes():
-			# list of results per size
-			results = [ ]
-			computedValues= [ ]
+		fileSizes = self.generateTestFileSizes();
+		#csv.DictReader
+		with open(resultFilename, 'w', newline='') as csvfile:
+
+			# TODO use DictWriter instead
+			# resultWriter = csv.DictWriter(csvfile,fieldnames= fileSizes , delimiter=' ',
+			# 	quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			
+
+
 			for iteration in range(1,max_repeat):
+				results = [ ]
 
-				fileToDownload=self.config["xp"]["files_url"] +"/"+str(fileSize)+".bin";
-				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
-				logger.info("Downloading file %s", fileToDownload)
+				# do it size by size
+				#range(blockSize, maxSize, blockSize )
+				for fileSize in fileSizes:
+					# list of results per size
 					
-				try:
-					# will produce sthg like
-					#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
-					# be careful
-					# time utility sends its output on stderr by default
-					time = subprocess.check_output(
-						["/usr/bin/time", 
-						"-f", # to specify format
-						"'%e'" , # elapsed time
-						"wget",
-						 "-q",
-						 "-O",
-						 "/dev/null",
-						 # " - ",
-						 fileToDownload
-						#, shell=True
-						],
-						stderr=subprocess.STDOUT
-						);
-					# append exection time.decode()
-					print("Result %s"%time.decode() )
-					results.append( time.decode() )
-				except subprocess.CalledProcessError as e:
-					logger.error("Error while executing command %s"%e.output);
-					return False
+					# computedValues= [ ]
 
 
-# TODO move that elsewhere, leave it to a script for instance
-			# # sort it to make it easier
-			# results.sort()
-			# # append at the end the results
-			# # add average/min/max at the end
-			# computedValues.append( math.fsum(results)/ results.len() )
-			# computedValues.append(  results.min() )
-			# computedValues.append(  results.max() )
-			# # prepend filesize
-			# # result.insert(0, currentSize)
-			# # TODO would be better to prepend
-			# results.append( computedValues )
-			# # result.insert(1,average)
-			# # result.insert(2,minimum)
-			# # result.insert(3,maximum)
+					fileToDownload=self.config["xp"]["files_url"] +"/"+str(fileSize)+".bin";
+					# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
+					logger.info("Downloading file %s", fileToDownload)
+						
+					try:
+						# will produce sthg like
+						#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
+						# be careful
+						# time utility sends its output on stderr by default
+						time = subprocess.check_output(
+							["/usr/bin/time", 
+							"-f", # to specify format
+							"%e" , # elapsed time
+							"wget",
+							 "-q",
+							 "-O",
+							 "/dev/null",
+							 # " - ",
+							 fileToDownload
+							#, shell=True
+							],
+							stderr=subprocess.STDOUT
+							);
+						# append exection time.decode()
+						print("Result %s"%time.decode() )
+						results.append( time.decode().rstrip() )
+					except subprocess.CalledProcessError as e:
+						logger.error("Error while executing command %s"%e.output);
+						return False
 
-			# for debug
-			print("REsult",results )
-			# print line
-			f.write(" ".join(results) )
-			f.write("\n")
+					print("Results :", results )
+					# resultWriter.writerow(results)
 
-		f.close()
-		return True;
+
+	# TODO move that elsewhere, leave it to a script for instance
+				# # sort it to make it easier
+				# results.sort()
+				# # append at the end the results
+				# # add average/min/max at the end
+				# computedValues.append( math.fsum(results)/ results.len() )
+				# computedValues.append(  results.min() )
+				# computedValues.append(  results.max() )
+				# # prepend filesize
+				# # result.insert(0, currentSize)
+				# # TODO would be better to prepend
+				# results.append( computedValues )
+				# # result.insert(1,average)
+				# # result.insert(2,minimum)
+				# # result.insert(3,maximum)
+
+
+				# for debug
+			# 	print("REsult",results )
+			# 	# print line
+				csvfile.write(" ".join(results) )
+				csvfile.write("\n")
+
+			# 	# with open('some.csv', 'w', newline='') as f:
+			# 	#     writer = csv.writer(f)
+			# 	#     writer.writerows(someiterable)
+			# f.close()
+			return True;
 
 
 	#it should trace a graph at least

@@ -29,6 +29,13 @@ Pyro_server should be launched by hand.
 If you have any questions feel free to send an email at matthieu.coudron at lip6 dot fr .
 
 
+To trace plots, you would also need to install numpy and matplotlib.
+On debian: 
+-sudo apt-get install python3-matplotlib
+-sudo apt-get install python3-numpy
+
+
+
 TODO:
 -allow for different level of logging ?
 -TODO ability to install every (via nsyslog ) ?

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import configparser
 import argparse
 import sys
+from collections import defaultdict
 
 
 # TODO it 
@@ -18,60 +19,41 @@ config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolat
 
 parser = argparse.ArgumentParser(
 	#description='Handle mptcp kernel module in charge of converting kernel requests into netlink requests '
-	description='Will run tests you precise'
+	description='This program generates plots for different experiences'
 	)
 
 #there must be at most one ?
 parser.add_argument('config_file', type=argparse.FileType('r') ,
-	# choices=[
-	# 		  "graph1.ini"
-	# 		  # 'client.ini',
-	# 		  ], 
-		  help="Choose")
+		  help="Choose plot configuration file")
 
+# parse 
 args = parser.parse_args( [ sys.argv[1] ] )
 
 
 # TODO draw with error bars
 
-print("conf",args.config_file )
+print("Logging config file ",args.config_file )
 
 # config.set("DEFAULT", "MainDir", mainDir )
 
 config.read_file( args.config_file )
 
 # name plots to draw
-plots= config["general"]["draw"].split(' ')
-for plot in plots:
+plotNames = config["general"]["draw"].split(' ')
+for plotName in plotNames:
 	# TODO check a section exists
-	print("plot", plot )
+	print("plot name: ", plotName )
 	#argparse.FileType('r')
-	parser.add_argument( plot,  type=str, help=config[plot]["legend"] )
+	parser.add_argument( plotName,  
+						type=str,
+						# type=argparse.FileType('r'), 
+						help=config[plotName]["legend"] 
+						)
 
 
 args = parser.parse_args( sys.argv[1:] )
 
-print("This program aims at creating a gnuplot script with embedded data")
 
-# TODO need to get 
-
-resultsFilename= "/home/teto/xp_couplage/results/tcpwithoutlisp_1509_2118.csv"
-# TODO use numpy to load data
-# np.array
-# names = True reads column names from data
-res = np.loadtxt( resultsFilename, dtype=None, comments="#"
-		#, names=True
-		, delimiter=","
-		)
-
-fileSizes = res[0,]
-print("file sizes:\n", fileSizes)
-
-res= res[1:,]
-print("Loaded results:\n", res)
-
-# res.reshape( (3,3))
-mean = res.mean()
 
 
 
@@ -99,65 +81,122 @@ def getAverageRowResults( arr ):
 	return arr.mean(  axis=0)
 
 
-avg = getAverageRowResults ( res)
-minValues = getLowestRowResults ( res)
-maxValues = getHighestRowResults ( res)
 
-print("mean", avg )
-print("min",  minValues )
-print("high", maxValues )
+def drawPlot(dataFilename):
 
-# errors relative to data set
-yerr= maxValues- avg, avg-minValues
-print("Compute xerr, yerr",yerr)
+	# TODO need to get 
+	print("Drawing plot for dataset ", dataFilename)
+
+	# resultsFilename= "/home/teto/xp_couplage/results/tcpwithoutlisp_1509_2118.csv"
+	# TODO use numpy to load data
+	# np.array
+	# names = True reads column names from data
+	res = np.loadtxt( dataFilename, 
+					dtype=None, 
+					comments="#",
+			#, names=True
+			 		delimiter=","
+			)
+
+	fileSizes = res[0,]
+	print("file sizes:\n", fileSizes)
+
+	res= res[1:,]
+	# print("Loaded results:\n", res)
+
+	# res.reshape( (3,3))
+	mean = res.mean()
+
+	# generate linear spaces
+	# x= res[0,]
 
 
 
-# generate linear spaces
-x= res[0,]
+	avg = getAverageRowResults ( res)
+	minValues = getLowestRowResults ( res)
+	maxValues = getHighestRowResults ( res)
+
+	print("mean", avg )
+	print("min",  minValues )
+	print("high", maxValues )
+
+	# errors relative to data set
+	yerr= maxValues- avg, avg-minValues
+	print("Compute xerr, yerr",yerr)
+
+
+	#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)
+	p1 = plt.errorbar(
+				fileSizes,
+				# x, 
+				y=avg, 
+				yerr=yerr, 
+				label = config[plotName]["legend"]
+	# 			xerr=None, 
+	# 			fmt='-', 
+	# 			ecolor=None, 
+	# 			elinewidth=None, 
+	# 			capsize=3, 
+	# 			barsabove=False, 
+	# 			lolims=False, 
+	# 			uplims=False, 
+	# 			xlolims=False, 
+	# 			xuplims=False, 
+	# 			errorevery=1, 
+	# 			capthick=None, 
+	# 			hold=None, 
+	# 			#**kwargs
+				)
+	return p1
+
 # numpy.linspace(start, stop, num=50, endpoint=True, retstep=False)
 
 # linewidth=2.0,names=("lol","plop")
 
 
-#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)
-p1 = plt.errorbar(
-			fileSizes,
-			# x, 
-			y=avg, 
-			yerr=yerr, 
-# 			xerr=None, 
-# 			fmt='-', 
-# 			ecolor=None, 
-# 			elinewidth=None, 
-# 			capsize=3, 
-# 			barsabove=False, 
-# 			lolims=False, 
-# 			uplims=False, 
-# 			xlolims=False, 
-# 			xuplims=False, 
-# 			errorevery=1, 
-# 			capthick=None, 
-# 			hold=None, 
-# 			#**kwargs
-			)
-
-p1 = plt.plot(  res[0,] , "b") 
-#, legend="Hello world"
-p2 = plt.plot( res[1,],"r", label="red" )
-plt.legend([p1, p2], ["Sinus", "Cosinus"])
+print("names",plotNames)
+plots = dict.fromkeys( plotNames)
+plots = defaultdict(dict)
+# for plot in plots:
+# 	plot = dict.fromkeys(["graph" ,"legend" ])
 
 
-plt.title("Mon titre")
+for plotName in plotNames:
+	plots[plotName]["graph"]  = drawPlot( getattr(args,plotName) )
+	# plots[plotName][0]  = drawPlot( getattr(args,plotName) )
+	plots[plotName]["legend"] = config[plotName]["legend"]
+
+# p1 = plt.plot(  res[0,] , "b") 
+# #, legend="Hello world"
+# p2 = plt.plot( res[1,],"r", label="red" )
+# TODO use getkeys or getattributes 
+# plt.legend([p1, p2], ["Sinus", "Cosinus"])
+
+
+# plt.title("Mon titre")
 plt.title(config["general"]["title"])
-plt.xticks( fileSizes)
+# plt.xticks( fileSizes)
 # plt.yticks()
 plt.xlabel("hello world")
-# plot.xlabel(config["general"]["xlabel"])
-# plot.ylabel(config["general"]["ylabel"])
+plt.xlabel(config["general"]["xlabel"])
+plt.ylabel(config["general"]["ylabel"])
 
 plt.legend(loc='upper left')
 plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # with open( resultsFilename, 'r', newline='') as csvfile:
 

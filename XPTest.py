@@ -92,7 +92,7 @@ class XPTest:
 		# replace by enable (True/False) ?
 		if enable_lisp:
 			(self.localhost.router).start();
-			self.remotehost.router.start();
+			getattr(self.remotehost.router, "start") ();
 
 
 		else:
@@ -320,7 +320,7 @@ class XPTest:
 
 class TCPWithLISP(XPTest):
 	def __init__(self,  cfg_file, localhost,remotehost):
-		super( ).__init__( "tcpwithlisp", cfg_file,localhost, remotehost, False, True )
+		super( ).__init__( "tcpwithlisp", cfg_file,localhost, remotehost, True, False )
 		
 
 	# def prepare(self):

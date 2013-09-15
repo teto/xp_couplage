@@ -22,7 +22,7 @@ class MPTCP:
 	@staticmethod
 	def set_global_state(state):
 		# Use of the ternary operator, how cool is that ?!
-		correct = 1 if state else 0
+		correct = 1 if state == True else 0
 		os.system("sudo sysctl -w net.mptcp.mptcp_enabled=%d"% correct )
 
 	@staticmethod

@@ -46,6 +46,9 @@ class Host:
 		# set variable MainDir in config file
 
 		self.config.set("DEFAULT", "MainDir", mainDir )
+		
+
+
 		# if we gave the config filename
 		if type(config) is str: 
 			
@@ -75,9 +78,17 @@ class Host:
 
 		self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
 		#self.port 
+		self.config.set("DEFAULT", "hostname", self.getEID() )
 
+	# TODO check
 	def getEID(self):
-		return self.config["network"]["eid"]
+		if self.router.is_running():
+			return self.config["network"]["eid"]
+		return self.getIp()
+
+	def getRLOC(self):
+		# if not self.router.is_running():
+		return self.getIp()
 
 	def getIp(self):
 		return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
@@ -86,6 +97,10 @@ class Host:
 	# or libnl python wrapper 
 	def getInterfaces(self):
 		pass
+
+
+	def getWebfsUrl(self):
+		return "http://"+self.getEID()+ ":"+ self.config["webfs"]["port"];
 
 
 	""" ping timeouts after 3 sec"""
@@ -165,10 +180,12 @@ if __name__ == '__main__':
 	)
 
 	#there must be at most one ?
-	parser.add_argument('config_file', choices=(
-				  'server.ini',
-				  'client.ini',
-				  ), 
+	parser.add_argument('config_file', 
+				type=argparse.FileType('r'),
+		# choices=(
+		# 		  'server.ini',
+		# 		  'client.ini',
+		# 		  ), 
 			  help="Choose")
 
 	subparsers	  = parser.add_subparsers(

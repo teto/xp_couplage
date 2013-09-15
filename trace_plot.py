@@ -7,6 +7,7 @@ import configparser
 import argparse
 import sys
 
+
 # TODO it 
 
 # expects a plot script and data files
@@ -28,7 +29,7 @@ parser.add_argument('config_file', type=argparse.FileType('r') ,
 	# 		  ], 
 		  help="Choose")
 
-args = parser.parse_args( )
+args = parser.parse_args( [ sys.argv[1] ] )
 
 
 # TODO draw with error bars
@@ -44,7 +45,8 @@ plots= config["general"]["draw"].split(' ')
 for plot in plots:
 	# TODO check a section exists
 	print("plot", plot )
-	parser.add_argument( plot, help=config[plot]["legend"] )
+	#argparse.FileType('r')
+	parser.add_argument( plot,  type=str, help=config[plot]["legend"] )
 
 
 args = parser.parse_args( sys.argv[1:] )
@@ -53,41 +55,109 @@ print("This program aims at creating a gnuplot script with embedded data")
 
 # TODO need to get 
 
-resultsFilename= "/home/teto/xp_couplage/results/tcpwithoutlisp_1409_0059.data"
+resultsFilename= "/home/teto/xp_couplage/results/tcpwithoutlisp_1509_2118.csv"
 # TODO use numpy to load data
-res = np.loadtxt( resultsFilename, comments="#", delimiter=" " )
+# np.array
+# names = True reads column names from data
+res = np.loadtxt( resultsFilename, dtype=None, comments="#"
+		#, names=True
+		, delimiter=","
+		)
 
-print(res)
+fileSizes = res[0,]
+print("file sizes:\n", fileSizes)
 
+res= res[1:,]
+print("Loaded results:\n", res)
 
-mean = np.mean( res, axis=0)
-print("mean", mean)
+# res.reshape( (3,3))
+mean = res.mean()
+
 
 
 # 
-indices = res.argmax( axis=0)
+
 # returns indices
 # ligne/colonne
 # arange(x) generate a flat array of x entries starting from 0 to x-1
-temp = np.arange(3)
-print("max", indices, res[indices, temp]   )
+
+def getHighestRowResults( arr):
+	# temp = np.arange(3)
+	# indices = res.argmax( axis=0)
+	# print("max", indices, arr[indices, temp] )
+	# return arr[ arr.argmax( axis=0), np.arange(3) ] 
+	return arr.max(axis=0)
+
+
+def getLowestRowResults( arr):
+	# temp = 
+	# indices = 
+	# return arr[ arr.argmin( axis=0), np.arange(3) ] 
+	return arr.min(axis=0)
+
+def getAverageRowResults( arr ):
+	return arr.mean(  axis=0)
+
+
+avg = getAverageRowResults ( res)
+minValues = getLowestRowResults ( res)
+maxValues = getHighestRowResults ( res)
+
+print("mean", avg )
+print("min",  minValues )
+print("high", maxValues )
+
+# errors relative to data set
+yerr= maxValues- avg, avg-minValues
+print("Compute xerr, yerr",yerr)
+
+
 
 # generate linear spaces
-x=np.linspace(-5,5,100)
-
+x= res[0,]
+# numpy.linspace(start, stop, num=50, endpoint=True, retstep=False)
 
 # linewidth=2.0,names=("lol","plop")
-plot.xlabel("File size")
-plot.ylabel("Time")
-p1 = plot.plot(  res[0,] , "b") 
+
+
+#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)
+p1 = plt.errorbar(
+			fileSizes,
+			# x, 
+			y=avg, 
+			yerr=yerr, 
+# 			xerr=None, 
+# 			fmt='-', 
+# 			ecolor=None, 
+# 			elinewidth=None, 
+# 			capsize=3, 
+# 			barsabove=False, 
+# 			lolims=False, 
+# 			uplims=False, 
+# 			xlolims=False, 
+# 			xuplims=False, 
+# 			errorevery=1, 
+# 			capthick=None, 
+# 			hold=None, 
+# 			#**kwargs
+			)
+
+p1 = plt.plot(  res[0,] , "b") 
 #, legend="Hello world"
-p2 = plot.plot( res[1,],"r", label="red" )
-plot.legend([p1, p2], ["Sinus", "Cosinus"])
-plot.title("Mon titre")
-# plot.xticks()
-# plot.yticks()
-plot.legend(loc='upper left')
-plot.show()
+p2 = plt.plot( res[1,],"r", label="red" )
+plt.legend([p1, p2], ["Sinus", "Cosinus"])
+
+
+plt.title("Mon titre")
+plt.title(config["general"]["title"])
+plt.xticks( fileSizes)
+# plt.yticks()
+plt.xlabel("hello world")
+# plot.xlabel(config["general"]["xlabel"])
+# plot.ylabel(config["general"]["ylabel"])
+
+plt.legend(loc='upper left')
+plt.show()
 
 # with open( resultsFilename, 'r', newline='') as csvfile:
 

@@ -7,6 +7,7 @@ import logging.config
 from multiprocessing import Process, Queue, Event, current_process
 import random
 import time
+import shlex
 
 logger = logging.getLogger( __name__ )
 logger.setLevel(logging.DEBUG)
@@ -119,10 +120,10 @@ class Program:
 	# absolute 
 	def __init__(self, binary, need_root):
 		
-		if need_root:
-			self.sudo = "/usr/bin/sudo "
-		else:
-			self.sudo = ""
+		
+		self.sudo = "/usr/bin/sudo " if need_root else ""
+		
+			
 
 		# self.src = src_dir
 		self.bin = binary
@@ -152,10 +153,16 @@ class Program:
 
 	# in case there are additionnal commands
 	# by default will launch programs in background
-	def start(self, cmd_line="", background=True):
+	def start(self, options="", background=True, *args, **kwargs):
 		
+		command_line = self.sudo + self.bin + options
+		logger.info("Start function: %s"% command_line)
 		#
-		self.process = subprocess.Popen( self.sudo + self.bin + cmd_line , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		cli_args = shlex.split(command_line)
+		# works only on windows ,startupinfos=subprocess.CREATE_NEW_CONSOLE
+
+		self.process = subprocess.Popen( cli_args , **kwargs)
+		
 		if background:
 			return self.process.poll()
 			# subprocess.check_call( ,shell=True)
@@ -256,7 +263,7 @@ class LISPmob(Program):
 
 	def __init__(self, src_dir, bin, config_file):
 		# need root True
-		super().__init__( bin, False )
+		super().__init__( bin, True )
 		# Program.__init__
 		if not os.path.isdir(src_dir):
 			raise Exception( src_dir + "is not a directory");
@@ -272,7 +279,9 @@ class LISPmob(Program):
 	#
 	# def __dir__():
 	# 	return ('build', 'start' )
-
+	def start(self):
+		stdout_fd=open("/tmp/lispmob.log","w") 
+		super().start(stdin=stdout_fd,stderr=stdout_fd)
 
 	def build(self):
 		print("Building LISPmob")
@@ -295,6 +304,12 @@ class LISPmob(Program):
 	# 		return True
 
 	# 	subprocess.check_call( "sudo killall -9 lispd ",shell=True)
+
+
+
+
+
+
 
 
 def worker_process(config):

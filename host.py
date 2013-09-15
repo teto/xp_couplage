@@ -115,12 +115,14 @@ class Host:
 
 
 	def mptcp_set_state(self,state):
+		logger.info("changing mptcp state: %s")
 		return mptcp.MPTCP.set_global_state(state)
 
 	# should check if it's in its abilities
 	# def __call__():
 
 	def lispmob(self,action):
+		logger.info("Lipsmob action: %s"%action )
 		return getattr(self.router,action)();
 
 	def kernel(self,action):

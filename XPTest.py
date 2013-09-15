@@ -90,15 +90,19 @@ class XPTest:
 		self.remotehost = remotehost
 
 		# replace by enable (True/False) ?
+		print("enable lisp", enable_lisp)
 		if enable_lisp:
-			(self.localhost.router).start();
-			getattr(self.remotehost.router, "start") ();
-
+			logger.info("Please enable lispmob on both machines")
+			ret= input("Please enable lispmob on both machines")
+			# (self.localhost.router).start();
+			# self.remotehost.lispmob("start");
+			# TODO add a check
 
 		else:
+			ret= input("Please disable lispmob on both machines")
 			# (self.localhost.router).stop();
-			self.localhost.lispmob("stop")
-			self.remotehost.lispmob("stop")
+			# self.localhost.lispmob("stop")
+			# self.remotehost.lispmob("stop")
 			# self.remotehost.router.stop();
 
 

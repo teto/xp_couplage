@@ -245,7 +245,8 @@ class XPTest:
 		results[0,] = fileSizes
 		print("results", results )
 
-		for iteration in range(1,max_repeat):
+		# range(start,end) goes up to end - 1
+		for iteration in range(1,max_repeat + 1):
 			# results = [ ]
 
 			# do it size by size

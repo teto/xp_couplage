@@ -8,40 +8,36 @@ import os
 #
 #/proc/net/mptcp/mptcp
 # only "static" functions
-class MPTCP:
-	def __init__(self):
-		pass
+
+# @staticmethod
+def get_global_state():
+	return subprocess.check_output("sysctl -n net.mptcp.mptcp_enabled")
+
+#def switch_state():
 
 
-	@staticmethod
-	def get_global_state():
-		return subprocess.check_output("sysctl -n net.mptcp.mptcp_enabled")
+def set_global_state(state):
+	# Use of the ternary operator, how cool is that ?!
+	correct = 1 if state == True else 0
+	os.system("sudo sysctl -w net.mptcp.mptcp_enabled=%d"% correct )
 
-	#def switch_state():
 
-	@staticmethod
-	def set_global_state(state):
-		# Use of the ternary operator, how cool is that ?!
-		correct = 1 if state == True else 0
-		os.system("sudo sysctl -w net.mptcp.mptcp_enabled=%d"% correct )
+def get_if_capability(if_name):
+	return subprocess.check_output("ip addr show "+ if_name +" | grep -o NOMULTIPATH")
 
-	@staticmethod
-	def get_if_capability(if_name):
-		return subprocess.check_output("ip addr show "+ if_name +" | grep -o NOMULTIPATH")
 
-	@staticmethod
-	def set_if_capability(if_name, state):
-		return subprocess.check_output("sudo ip link set dev " + if_name + " multipath " + state)
-	#	return False
-	#local cmd="$SUDO "
+def set_if_capability(if_name, state):
+	return subprocess.check_output("sudo ip link set dev " + if_name + " multipath " + state)
+#	return False
+#local cmd="$SUDO "
 
-	@staticmethod
-	def enable():
-		return MPTCP.set_global_state(1)
-		
-	@staticmethod
-	def disable():
-		return MPTCP.set_global_state(0)
+
+def enable():
+	return set_global_state(1)
+	
+
+def disable():
+	return set_global_state(0)
 
 
 
@@ -64,10 +60,10 @@ if __name__ == '__main__':
 				print ("Setting mptcp for interface ", if_name,"to ","on")
 				MPTCP.set_if_capability( if_name , "on" )
 		else:
-			MPTCP.enable()
+			enable()
 	# disable MPTCP
 	else:
 		# don't 
-		MPTCP.disable()
+		disable()
 
 

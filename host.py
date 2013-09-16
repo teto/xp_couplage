@@ -16,7 +16,7 @@ import io
 # call it core or common
 import isix.linux.core as linux
 import isix.linux.module
-import isix.network.mptcp
+import isix.network.mptcp as mptcp
 import lispmob
 
 logger = logging.getLogger( __name__ )
@@ -122,7 +122,7 @@ class Host:
 
 	def mptcp_set_state(self,state):
 		logger.info("changing mptcp state: %s")
-		return mptcp.MPTCP.set_global_state(state)
+		return mptcp.set_global_state(state)
 
 	# should check if it's in its abilities
 	# def __call__():

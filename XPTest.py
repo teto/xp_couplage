@@ -267,7 +267,7 @@ class XPTest:
 				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
 				logger.info("Downloading file %s", fileToDownload)
 					
-				for attempt in range(0,3)
+				for attempt in range(0,3):
 					try:
 						# will produce sthg like
 						#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin

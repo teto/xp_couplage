@@ -267,40 +267,42 @@ class XPTest:
 				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
 				logger.info("Downloading file %s", fileToDownload)
 					
-				try:
-					# will produce sthg like
-					#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
-					# be careful
-					# time utility sends its output on stderr by default
-					time = subprocess.check_output(
-						["/usr/bin/time", 
-						"-f", # to specify format
-						"%e" , # elapsed time
-						"wget",
-						"--tries",
-						"1",
-						"--timeout",
-						"1",
-						 "-q",
-						 "-O",
-						 "/dev/null",
-						 # " - ",
-						 fileToDownload
-						#, shell=True
-						],
-						stderr=subprocess.STDOUT
-						);
-					# append exection time.decode()
-					elapsedTime = time.decode().rstrip()
-					print("Result %s"% elapsedTime )
-					# results.append( time.decode().rstrip() )
-					
-					results[iteration, no] = elapsedTime
-					# print( "res",results )
+				for attempt in range(0,3)
+					try:
+						# will produce sthg like
+						#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
+						# be careful
+						# time utility sends its output on stderr by default
+						time = subprocess.check_output(
+							["/usr/bin/time", 
+							"-f", # to specify format
+							"%e" , # elapsed time
+							"wget",
+							"--tries",
+							"1",
+							"--timeout",
+							"1",
+							 "-q",
+							 "-O",
+							 "/dev/null",
+							 # " - ",
+							 fileToDownload
+							#, shell=True
+							],
+							stderr=subprocess.STDOUT
+							);
+						# append exection time.decode()
+						elapsedTime = time.decode().rstrip()
+						print("Result %s"% elapsedTime )
+						break;
+						# results.append( time.decode().rstrip() )
+						
+						results[iteration, no] = elapsedTime
+						# print( "res",results )
 
-				except subprocess.CalledProcessError as e:
-					logger.error("Error while executing command %s"%e.output);
-					return False
+					except subprocess.CalledProcessError as e:
+						logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
+						return False
 
 				# print("Results :", results )
 				# resultWriter.writerow(results)

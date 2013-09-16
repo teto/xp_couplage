@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-import mptcp
-import lispmob
+# import mptcp
+
 
 import configparser
 import argparse
@@ -8,10 +8,16 @@ import sys
 import os
 # import inspect
 import subprocess
-import linux
+
 import Pyro4
 import logging
 import io
+
+# call it core or common
+import isix.linux.core as linux
+import isix.linux.module
+import isix.network.mptcp
+import lispmob
 
 logger = logging.getLogger( __name__ )
 logger.setLevel(logging.DEBUG)
@@ -198,7 +204,7 @@ if __name__ == '__main__':
 	daemon_parser.add_argument('action', choices=('compile','start','stop'), action="store")
 	# daemon_parser.set_defaults(func=handle_daemon)
 
-	module_parser = subparsers.add_parser(help='module help')
+	module_parser = subparsers.add_parser('module',help='module help')
 	module_parser.add_argument('action', choices=('compile','load','unload','is_loaded') )
 	# module_parser.set_defaults(func=handle_module)
 

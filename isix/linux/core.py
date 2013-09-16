@@ -12,10 +12,7 @@ logger.setLevel( logging.DEBUG )
 
 
 
-def module_load(name):
-	pass
 
-def module_unload(name):
 
 class KernelSource:
 	

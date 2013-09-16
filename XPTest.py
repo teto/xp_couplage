@@ -247,7 +247,7 @@ class XPTest:
 		# creates a 2-dimensional array 
 		results = np.zeros( (max_repeat +1, len(fileSizes) ) );
 		results[0,] = fileSizes
-		print("results", results )
+		# print("results", results )
 
 		# range(start,end) goes up to end - 1
 		for iteration in range(1,max_repeat + 1):
@@ -291,11 +291,12 @@ class XPTest:
 						stderr=subprocess.STDOUT
 						);
 					# append exection time.decode()
-					print("Result %s"%time.decode() )
+					elapsedTime = time.decode().rstrip()
+					print("Result %s"% elapsedTime )
 					# results.append( time.decode().rstrip() )
 					
-					results[iteration, no] = time.decode().rstrip()
-					print( "res",results )
+					results[iteration, no] = elapsedTime
+					# print( "res",results )
 
 				except subprocess.CalledProcessError as e:
 					logger.error("Error while executing command %s"%e.output);

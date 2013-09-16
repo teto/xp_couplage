@@ -11,6 +11,12 @@ logger = logging.getLogger( __name__)
 logger.setLevel( logging.DEBUG )
 
 
+
+def module_load(name):
+	pass
+
+def module_unload(name):
+
 class KernelSource:
 	
 	def __init__(self, src_dir):

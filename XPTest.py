@@ -301,7 +301,7 @@ class XPTest:
 					logger.error("Error while executing command %s"%e.output);
 					return False
 
-				print("Results :", results )
+				# print("Results :", results )
 				# resultWriter.writerow(results)
 
 

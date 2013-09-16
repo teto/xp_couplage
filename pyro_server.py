@@ -352,8 +352,8 @@ if __name__ == '__main__':
 	# print("ns: " , args.ns_port )
 
 	server = PyroServer( 
-				port= config['pyro'].getint("daemon_port")
-					#localhostname=args.localhost,
+				port= config['pyro'].getint("daemon_port"),
+				localhostname=args.localhost
 						)
 
 	use_nameserver = config['pyro'].getboolean("use_nameserver")

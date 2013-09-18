@@ -20,6 +20,7 @@ import sys
 import signal 
 import socket
 import select
+import multiprocessing
 from Pyro4 import threadutil
 
 
@@ -105,10 +106,34 @@ class PyroServer(threading.Thread):
 			return res[0], int(res[1])
 		return None,None
 
+	def getLogger(self):
+		return self.h
+
 	# def look_for_nat():
 	# TODO pass **kwargs
 	# nat_port=None, 
 	def __init__(self, port, localhostname=None, nat_host=None, nat_port=None, **kwargs):
+
+		self.q = multiprocessing.Queue()
+		self.logger = logging.getLogger("Main")
+
+		self.qh = logging.handlers.QueueHandler(self.q)
+		
+		self.h = logging.StreamHandler()
+		
+		# a chaque fois qu'on ecrit dans le logger Main,
+		# il va ecrire dans le QueueHandler
+		self.logger.addHandler( self.qh )
+		# root = logging.getLogger()
+		# root.addHandler( self.h )
+		
+		# pass handlers
+		# when listener discovers records, it will forward them to 
+		# the stream handler
+		self.listener = logging.handlers.QueueListener( self.q, self.h )
+
+		print("=== Starting logger listener ===")
+		self.listener.start()
 
 		if not localhostname:
 			localhostname = Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
@@ -190,7 +215,13 @@ class PyroServer(threading.Thread):
 
 	def locateNameServer(self):
 		pass
+
+
+	# TODO 
+	# display available services 
+	# cleanup isix on except (KeyboardInterrupt, SystemExit):
 	# def register
+	# requestLoop() is blocking :/
 	def run(self):
 
 		# below is our custom event loop.
@@ -198,8 +229,9 @@ class PyroServer(threading.Thread):
 
 		logger.info("Starting ");
 
-
-
+		# TODO be able to change behavior on certain key press,
+		# to display that help at some interval
+		# except KeyboardInterrupt:
 
 		# 	print("Waiting for events...")
 		# 	# create sets of the socket objects we will be waiting on
@@ -299,6 +331,10 @@ def ns_cli_parser(args,namespace=None):
 
 
 
+def worker_process():
+	logger = logging.getLogger("Main")
+	logger.warning("worker working")
+
 
 if __name__ == '__main__':
 
@@ -393,6 +429,18 @@ if __name__ == '__main__':
 
 	logger.info("Host registered. New uri %s"% uri)
 	#
+	# listener.start()
+	workers = []
+	for i in range(10):
+		worker = multiprocessing.Process(target=worker_process,
+									   args=())
 
-	server.run()
+		workers.append(worker)
+		worker.start()
+	
+	for w in workers:
+		w.join()
+	# queue.put_nowait(None)
+	
+	# server.run()
 

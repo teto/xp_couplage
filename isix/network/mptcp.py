@@ -58,7 +58,7 @@ if __name__ == '__main__':
 		if len(args.interfaces) > 0:
 			for if_name in args.interfaces:
 				print ("Setting mptcp for interface ", if_name,"to ","on")
-				MPTCP.set_if_capability( if_name , "on" )
+				set_if_capability( if_name , "on" )
 		else:
 			enable()
 	# disable MPTCP

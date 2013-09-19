@@ -38,7 +38,7 @@ class Program:
 		#
 		# logger.warning("Not implemented: Starting program")
 		# returns a mp.Process
-		print("command", self._command)
+		logger.info("Launching %s"% self._command)
 		process = service.create_process( self._command )
 		# if daemon:
 		process.daemon = daemon

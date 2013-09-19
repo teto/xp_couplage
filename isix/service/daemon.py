@@ -67,7 +67,7 @@ def call_thread(cli,logger,**kwargs):
 
 	# TODO could use select here 
 	while proc.poll() is None:
-		print("program still running", proc.returncode)
+		# print("program still running", proc.returncode)
 		# sys.stderr.read()
 		# returns a byte array
 		data = proc.stdout.read()

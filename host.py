@@ -30,6 +30,6 @@ if __name__ == '__main__':
 	# TODO complete absolute path towards config file
 	host = host.Host( args.config_file )
 	# print("webfs cfg", host["webfs"] )
-	host["test"].start()
+	host["daemon"].start()
 	time.sleep(10)
 	# getattr(host, args.mode)( args.action)

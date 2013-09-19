@@ -89,7 +89,7 @@ def describe_section( section ):
 # network objects ?
 """
 
-return programs
+return programs and config (somehow a hack)
 """
 def loadConfigFile(configFile):
 
@@ -156,7 +156,7 @@ def loadConfigFile(configFile):
 			logger.error("Option [%s] unavailable , ignoring module [%s] "%(e, sectionName ) )
 
 	# print("programs", modules )
-	return modules , None
+	return modules , config
 
 
 

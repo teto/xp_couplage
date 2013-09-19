@@ -5,9 +5,10 @@ from isix.log import core
 
 logger = logging.getLogger("isix.daemon")
 
+
 # to dispatch al messages to subhandlers
 logger.setLevel( logging.DEBUG )
-
+logger.propagate = False
 
 # main queue
 q = multiprocessing.Queue()
@@ -27,7 +28,7 @@ fileHandler = logging.FileHandler('isix.daemon.log')
 consoleHandler.setLevel( logging.DEBUG )
 fileHandler.setLevel( logging.DEBUG)
 
-formatter  = logging.Formatter(' ${levelname} (Process: ${processName}) ${message}' , style='$')
+formatter  = logging.Formatter('${levelname} (Process: ${processName}) ${message}' , style='$')
 consoleHandler.setFormatter ( formatter )
 #
 # we can passa list to it

@@ -18,6 +18,7 @@ import Pyro4
 import datetime
 import csv
 import numpy as np
+import isix.host as host
 
 # timeout before locateNS failure 
 Pyro4.config.COMMTIMEOUT = 3
@@ -75,13 +76,15 @@ def check_for_folder(dirname):
 #	echo "iperf -c mptcp.info.ucl.ac.be -t 20"
 #	echo "$HOME/xp_couplage/wget_test.sh 153.16.49.120:8000/xpfiles temp 3"
 # should also create remote and local hosts
+# TODO should be able to accept a file (unifnished test) as an argument
+# 
 class XPTest:
 	#name = property()
 	
 	# hosts should be instances of RemoteHost
 	# **kwargs
 	# for key in kwargs
-	def __init__(self, name, cfg, localhost, remotehost,   enable_lisp, enable_mptcp):
+	def __init__(self, name, cfg, localhost, remotehost, enable_lisp, enable_mptcp):
 		
 		self.name = name
 
@@ -92,18 +95,10 @@ class XPTest:
 		# replace by enable (True/False) ?
 		print("enable lisp", enable_lisp)
 		if enable_lisp:
-			logger.info("Please enable lispmob on both machines")
-			ret= input("Please enable lispmob on both machines")
-			# (self.localhost.router).start();
-			# self.remotehost.lispmob("start");
-			# TODO add a check
-
+			# logger.info("Please enable lispmob on both machines")
+			input("Please enable lispmob on both machines")
 		else:
-			ret= input("Please disable lispmob on both machines")
-			# (self.localhost.router).stop();
-			# self.localhost.lispmob("stop")
-			# self.remotehost.lispmob("stop")
-			# self.remotehost.router.stop();
+			input("Please disable lispmob on both machines")
 
 
 		# TODO check routes are ok 
@@ -135,8 +130,9 @@ class XPTest:
 		# TODO localhost.check_connectivity( remotehost )
 		logger.info("Checking connectivity")
 		#os.system("wget  --timeout 3 -O -  "+ self.remotehost.address +" > /dev/null")
-		return self.localhost.ping( self.remotehost.getIp() )
+		return self.localhost.ping( self.remotehost.getEID() )
 		#return subprocess.call("ping ") ;
+
 
 	# pass a callback , fn ?
 	def generateTestFileSizes(self):
@@ -202,11 +198,47 @@ class XPTest:
 		return True
 
 
-	def run_unit_test():
+	# return elapsed time
+	def run_unit_test(self, fileToDownload):
+
+		logger.info("Downloading file %s", fileToDownload)
+
+		# will produce sthg like
+		#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
+		# be careful
+		# time utility sends its output on stderr by default
+		time = subprocess.check_output(
+			["/usr/bin/time", 
+			"-f", # to specify format
+			"%e" , # elapsed time
+			"wget",
+			"--tries",
+			"1",
+			"--timeout",
+			"1",
+			 "-q",
+			 "-O",
+			 "/dev/null",
+			 # " - ",
+			 fileToDownload
+			#, shell=True
+			],
+			stderr=subprocess.STDOUT
+			);
+		# append exection time.decode()
+		elapsedTime = time.decode().rstrip()
+		print("Result %s"% elapsedTime )
+		
+		return ( elapsedTime )
+		# results.append( time.decode().rstrip() )
+		
+		
+			# print( "res",results )
 		# 
 		#with tempfile.TemporaryFile() as fp:
-		pass
 
+	def saveResults(self,resultFilename,results):
+		np.savetxt( resultFilename, results, fmt="%.3f",delimiter="," )
 
 	# after launching tests
 	# generate a file in ./results with name
@@ -245,9 +277,13 @@ class XPTest:
 		# 	quotechar='|', quoting=csv.QUOTE_MINIMAL)
 		
 		# creates a 2-dimensional array 
-		results = np.zeros( (max_repeat +1, len(fileSizes) ) );
+		results = np.empty( (max_repeat +1, len(fileSizes) ) );
+		results.fill( np.NAN )
 		results[0,] = fileSizes
 		# print("results", results )
+
+		# Look if there are any empty
+		#numpy.isnan(myarray).any()
 
 		# range(start,end) goes up to end - 1
 		for iteration in range(1,max_repeat + 1):
@@ -256,53 +292,27 @@ class XPTest:
 			# do it size by size
 			#range(blockSize, maxSize, blockSize )
 			for no,fileSize in enumerate(fileSizes):
-				# list of results per size
-				
-				# computedValues= [ ]
-
-				#self.config["xp"]["files_url"]
-				# print("url", self.remotehost.getWebfsUrl() )
 
 				fileToDownload= self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
 				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
-				logger.info("Downloading file %s", fileToDownload)
-					
-				for attempt in range(0,3):
+
+				
+
+				MAX_ATTEMPT=3
+				for attempt in range(0,MAX_ATTEMPT):
 					try:
-						# will produce sthg like
-						#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
-						# be careful
-						# time utility sends its output on stderr by default
-						time = subprocess.check_output(
-							["/usr/bin/time", 
-							"-f", # to specify format
-							"%e" , # elapsed time
-							"wget",
-							"--tries",
-							"1",
-							"--timeout",
-							"1",
-							 "-q",
-							 "-O",
-							 "/dev/null",
-							 # " - ",
-							 fileToDownload
-							#, shell=True
-							],
-							stderr=subprocess.STDOUT
-							);
-						# append exection time.decode()
-						elapsedTime = time.decode().rstrip()
-						print("Result %s"% elapsedTime )
-						break;
-						# results.append( time.decode().rstrip() )
-						
+						elapsedTime = self.run_unit_test(fileToDownload)
 						results[iteration, no] = elapsedTime
-						# print( "res",results )
+
+						# save intermediate results
+						self.saveResults( resultFilename, results )
 
 					except subprocess.CalledProcessError as e:
 						logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
-						return False
+						if attempt < MAX_ATTEMPT:
+							continue;
+						else:
+							return False
 
 				# print("Results :", results )
 				# resultWriter.writerow(results)
@@ -311,7 +321,7 @@ class XPTest:
 			# csvfile.write(" ".join(results) )
 			# csvfile.write("\n")
 			# TODO add a comment as first line
-		np.savetxt( resultFilename, results, delimiter="," )
+		# np.savetxt( resultFilename, results, delimiter="," )
 		# 	# with open('some.csv', 'w', newline='') as f:
 		# 	#     writer = csv.writer(f)
 		# 	#     writer.writerows(someiterable)
@@ -430,7 +440,7 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# instanciate test class XPTest
 	# settings_file
 	test = getattr( sys.modules[__name__], test_name)( config, localhost,remotehost );
-	print ("Prelaunching operations");
+	logger.info ("Prelaunching operations");
 	if not test.prepare():
 		logger.error ( "failed preparing test '"+ test.name + "' ")
 		return False

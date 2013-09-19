@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import Pyro4
-import natutils
+import isix.network.natutils as natutils
 import pyro_server
 import sys
 import argparse

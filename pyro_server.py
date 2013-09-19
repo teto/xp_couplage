@@ -8,9 +8,9 @@
 # netstat -tonp
 # 
 import Pyro4
-import host
+# import host
 # import subprocess
-import natutils
+# import natutils
 import argparse
 import configparser
 import logging
@@ -22,7 +22,8 @@ import socket
 import select
 import multiprocessing
 from Pyro4 import threadutil
-
+from isix.network import natutils
+import isix.host as host
 
 logger = logging.getLogger( __name__)
 logger.setLevel(logging.DEBUG)
@@ -50,7 +51,7 @@ signal.signal(signal.SIGINT, sigint_handler)
 Pyro4.config.SOCK_REUSE = True
 # Pyro4.config.SOCK_REUSE = True
 
-
+# TODO split this into a 
 # MORE ABOUT THreads:
 # http://docs.python.org/3/library/threading.html#module-threading
 # 
@@ -336,20 +337,15 @@ def worker_process():
 	logger.warning("worker working")
 
 
+
+
+
+
 if __name__ == '__main__':
 
 
 	# List of all options there: http://pythonhosted.org/Pyro4/config.html
 	# Pyro4.config.COMMTIMEOUT = 60
-	
-
-	# TODO need to create one parser per optional subcommand
-	# pass it the namespace
-	# if not Pyro4.config.PYRO_MULTITHREADED:
-	# 	print("Sorry, this example requires multithreading.")
-	# 	print("Either your Python doesn't support it or it has been disabled in the config.")
-	# 	exit(1)
-
 
 
 	parser = argparse.ArgumentParser(
@@ -357,7 +353,7 @@ if __name__ == '__main__':
 			)
 
 	#argparse.FileType('r')
-	parser.add_argument('config', default="tests.ini", action="store", type=str,  help="Config filename. Describe experiment settings")
+	parser.add_argument('xpconfig', default="tests.ini", action="store", type=str,  help="Config filename. Describe experiment settings")
 
 	# should give the opportunity to override settings
 
@@ -383,8 +379,8 @@ if __name__ == '__main__':
 	#print("Remote Hostname: " , args.remotehost )
 	# print("Local Hostname: " , args.localhost )
 
-	print("natport: " , nat_port)
-	print("nathost: " , nat_host)
+	# print("natport: " , nat_port)
+	# print("nathost: " , nat_host)
 	# print("ns: " , args.ns_port )
 
 	server = PyroServer( 
@@ -419,7 +415,7 @@ if __name__ == '__main__':
 	# # TODO ptet ecraser la fonction register
 	uri=server.getDaemon().register(localhost)
 	
-	print("uri", uri)
+	print(uri)
 	# 
 	ip =server.getHostname()[0]
 	ns=Pyro4.locateNS( host=ip, port=ns_port )
@@ -428,19 +424,8 @@ if __name__ == '__main__':
 
 
 	logger.info("Host registered. New uri %s"% uri)
-	#
-	# listener.start()
-	workers = []
-	for i in range(10):
-		worker = multiprocessing.Process(target=worker_process,
-									   args=())
 
-		workers.append(worker)
-		worker.start()
-	
-	for w in workers:
-		w.join()
-	# queue.put_nowait(None)
-	
-	# server.run()
+
+	print("port ", localhost.config["webfs"]["port"])
+	server.run()
 

@@ -18,7 +18,7 @@ import isix.linux.core as linux
 from isix.config import loader
 import isix.linux.module
 import isix.network.mptcp as mptcp
-import lispmob
+
 
 logger = logging.getLogger( "isix" )
 logger.setLevel(logging.DEBUG)
@@ -43,15 +43,8 @@ class Host:
 	def __init__(self, config):
 
 		#
-		self._programs, self._extra = loader.loadConfigFile( config )
-
-		# first need to compile module
-		# TODO remove
-		# self.lisp_daemon = lispmob.LISPdaemon( self.config['daemon']['src'], self.config['daemon']['bin'])
-		# self.kernel = linux.KernelSource( self.config['kernel']['src'] );
-		# self.router = lispmob.LISPmob( self.config['lispmob']['src'], self.config['lispmob']['bin'], self.config['lispmob']['config'])
-		# self.mod = linux.InstalledModule( self.config['module']['bin'])
-		# self.config.set("DEFAULT", "hostname", self.getEID() )
+		self._programs, self.config = loader.loadConfigFile( config )
+		# self.config = config
 
 
 	# def start_daemon():
@@ -59,8 +52,8 @@ class Host:
 
 	# TODO check
 	def getEID(self):
-		if self.router.is_running():
-			return self["network"]["eid"]
+		# if self.router.is_running():
+			# return self.config["network"]["eid"]
 		return self.getIp()
 
 	def getRLOC(self):
@@ -68,6 +61,7 @@ class Host:
 		return self.getIp()
 
 	def getIp(self):
+		# return "127.0.0.1"
 		return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
 
 	# TODO should use pyroute2 
@@ -77,7 +71,8 @@ class Host:
 
 
 	def getWebfsUrl(self):
-		return "http://"+self.getEID()+ ":"+ self.config["webfs"]["port"];
+		# print ( "webfs port" , self.config["webfs"]["port"] )
+		return "http://"+self.getEID() + ":" + self.config["webfs"]["port"]
 
 
 	""" ping timeouts after 3 sec"""
@@ -92,64 +87,49 @@ class Host:
 
 
 	def mptcp_set_state(self,state):
-		logger.info("changing mptcp state: %s")
+		logger.info("changing mptcp state to :%s"%state)
 		return mptcp.set_global_state(state)
 
 	# should check if it's in its abilities
 	# def __call__():
 
+	# def kernel(self,action):
+	# 	return getattr(self.kernel,action)();
 
-
-
-	# TODO remove all the following
-	def lispmob(self,action):
-		logger.info("Lipsmob action: %s"%action )
-		return getattr(self.router,action)();
-
-	def kernel(self,action):
-		return getattr(self.kernel,action)();
-
-	def daemon(self,action):
-		print ("daemon subparser:", action );
-		#daemon = lispmob.Program();
-		# special usecase
-		if action == "compile":
-			cmd = "{1}/build.sh {2} {1} {0}".format(
-				self.config['daemon']['bin'],
-				self.config['daemon']['src'],
-				self.config['kernel']['src']) 
-			return subprocess.check_call( cmd ,shell=True)
-		else:
-			return getattr(self.lisp_daemon,action)();
-
-
-
-	#     
-		
+	# def daemon(self,action):
+	# 	print ("daemon subparser:", action );
+	# 	#daemon = lispmob.Program();
+	# 	# special usecase
+	# 	if action == "compile":
+	# 		cmd = "{1}/build.sh {2} {1} {0}".format(
+	# 			self.config['daemon']['bin'],
+	# 			self.config['daemon']['src'],
+	# 			self.config['kernel']['src']) 
+	# 		return subprocess.check_call( cmd ,shell=True)
+	# 	else:
+	# 		return getattr(self.lisp_daemon,action)();
 	# elif action == "load":
 	#     return subprocess.check_call("sudo "+ self.config['daemon']['bin'])
 	# else:
 	#     #
 	#     return os.system("sudo killall -r lig_daemon*)")
 
-	def module(self,action):
+	# def module(self,action):
 
-		print("Handling module with action:" + action);
+	# 	print("Handling module with action:" + action);
 
 		
-		if action == "compile":
-			kernel = linux.KernelSource( self.config['kernel']['src']);
+	# 	if action == "compile":
+	# 		kernel = linux.KernelSource( self.config['kernel']['src']);
 		
-			kernel.compile_module( self.config['module']['src'])
-			kernel.install_module( self.config['module']['src'])
-		elif action == "load":
-			self.mod.load()
-		else:
-			self.mod.unload()
+	# 		kernel.compile_module( self.config['module']['src'])
+	# 		kernel.install_module( self.config['module']['src'])
+	# 	elif action == "load":
+	# 		self.mod.load()
+	# 	else:
+	# 		self.mod.unload()
 
-		print ("Module loaded ", self.mod.is_loaded())
-
-
+	# 	print ("Module loaded ", self.mod.is_loaded())
 
 
 
@@ -222,4 +202,4 @@ if __name__ == '__main__':
 	# TODO complete absolute path towards config file
 	host = Host( args.config_file )
 
-	getattr(host, args.mode)( args.action)
+	# getattr(host, args.mode)( args.action)

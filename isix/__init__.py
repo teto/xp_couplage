@@ -3,7 +3,7 @@ import sys
  
 # print ("dir ", logging.__file__)
 
-__version__ = "0.1"
+__version__ = "0.1a"
 __author__ = "Matthieu Coudron"
 __date__ = "2012-Sep-04"
 
@@ -19,6 +19,6 @@ isixLogger = logging.getLogger("isix")
 
 ch = logging.StreamHandler()
 
-formatter = logging.Formatter( '${levelname} ${message}', style='$' )
+formatter = logging.Formatter( '${levelname} (${name}): ${message}', style='$' )
 ch.setFormatter ( formatter )
 isixLogger.addHandler(ch)

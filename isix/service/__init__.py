@@ -27,7 +27,7 @@ fileHandler = logging.FileHandler('isix.daemon.log')
 consoleHandler.setLevel( logging.DEBUG )
 fileHandler.setLevel( logging.DEBUG)
 
-formatter  = logging.Formatter('%(asctime)s %(levelname)s %(message)s' )
+formatter  = logging.Formatter(' ${levelname} (Process: ${processName}) ${message}' , style='$')
 consoleHandler.setFormatter ( formatter )
 #
 # we can passa list to it

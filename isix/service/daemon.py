@@ -60,7 +60,7 @@ def call_thread(cli,logger,**kwargs):
 			# ,close_fds=False
 			)
 
-	print("Proc poll", proc.poll( ) )
+	# print("Proc poll", proc.poll( ) )
 	# when I start this the pipes get closed ?
 	fd.set_fd_as_nonblocking( proc.stdout )
 	fd.set_fd_as_nonblocking( proc.stderr )

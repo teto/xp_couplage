@@ -122,34 +122,10 @@ class Program:
 		
 		
 		self.sudo = "/usr/bin/sudo " if need_root else ""
-		
-			
 
 		# self.src = src_dir
 		self.bin = binary
 		self.process = None;
-
-		# logger should be passed by construction ?
-		# create one by default
-		# logging.config.dictConfig(config)
-		# should be a QueueHandler
-		# config of the logger
-		# config_worker = {
-		# 'version': 1,
-		# 'disable_existing_loggers': True,
-		# 'handlers': {
-		# 'queue': {
-		# 'class': 'logging.handlers.QueueHandler',
-		# 'queue': q,
-		# },
-		# },
-		# 'root': {
-		# 'level': 'DEBUG',
-		# 'handlers': ['queue']
-		# },
-		# }
-		# self.logger  = logging.config.dictConfig(config_worker)
-		#logging.getLogger( self.get_bin_name() )
 
 	# in case there are additionnal commands
 	# by default will launch programs in background

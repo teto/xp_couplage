@@ -8,7 +8,8 @@ make pythonmodule3
 sudo make installpythonmodule3)
 -libnl3 and its python binding (trunk version, experimental)
  https://github.com/miniupnp/miniupnp.git
- 
+-Add the path to the isix folder to your env var PYTHONPATH
+
 Available here:
 -You will need to install python 2 and 3  and iperf and webfs.
 -an ssh server running on both server

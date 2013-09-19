@@ -7,8 +7,8 @@ import os
 import fcntl
 import time
 
-from isix.logging import core
-
+from isix.log import core
+from isix.linux import fd
 # setup default logger used by any daemon
 
 # def call_program
@@ -21,30 +21,6 @@ from isix.logging import core
 # subprocess.communicate also expects EOF
 
 #
-
-
-
-def check_fd_validity(fd):
-	try:
-		statinfo =  os.fstat( fd )
-		print("Check file descriptors status:", statinfo)
-	except OSError as e:
-		print("ERROR", e)
-
-
-
-
-
-""" expects a file descriptor
-can be retrieved for instance by self.proc.stdout.fileno()
-"""
-def set_fd_as_nonblocking(fd):
-	# retrieve current configuration of the file descriptor
-	try:
-		fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-		fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-	except OSError as e:
-		print("OSError",e)
 
 
 
@@ -84,25 +60,43 @@ def call_thread(cli,logger,**kwargs):
 			# ,close_fds=False
 			)
 
-	print("Proc pooll", proc.poll( ) )
+	print("Proc poll", proc.poll( ) )
 	# when I start this the pipes get closed ?
-	set_fd_as_nonblocking( proc.stdout )
-	set_fd_as_nonblocking( proc.stderr )
+	fd.set_fd_as_nonblocking( proc.stdout )
+	fd.set_fd_as_nonblocking( proc.stderr )
 
 	# TODO could use select here 
 	while proc.poll() is None:
-		# print("program still running", proc.returncode)
+		print("program still running", proc.returncode)
 		# sys.stderr.read()
 		# returns a byte array
 		data = proc.stdout.read()
 		if data:
 			# print("Data", data)
 			logger.log(logging.INFO, data.decode().rstrip() )
+		data = proc.stderr.read()
+		if data:
+			# print("Data", data)
+			logger.error( data.decode().rstrip() )
 		time.sleep(0.1)
 
 	proc.wait()
 
 
+# different version
+def create_process(cli, stdoutlogger=None, stderrlogger=None ):
+	
+	logger = logging.getLogger("isix.daemon")
+
+	pipe2 = multiprocessing.Process( 
+		target=call_thread,
+		#logger
+		args=( cli , logger  )
+		)
+
+	# pipe2.daemon = True
+	# pipe2.start()
+	return pipe2
 
 
 # TODO use mp.Value to 
@@ -153,72 +147,58 @@ class SelectBasedListener(multiprocessing.Process):
 
 
 
-# different version
-def call2(cli, stdoutlogger=None, stderrlogger=None ):
-	
-	logger = logging.getLogger("isix.daemon")
-
-	pipe2 = multiprocessing.Process( 
-		target=call_thread,
-		#logger
-		args=( cli , logger  )
-		)
-
-	pipe2.daemon = True
-	pipe2.start()
-	return pipe2
 
 
 
 
-def call(cli, stdoutlogger=None, stderrlogger=None ):
+# def call(cli, stdoutlogger=None, stderrlogger=None ):
 
-	# TODO even if we pass a logger name 
-	# we should prepend isix.daemon
-	logger = logging.getLogger("isix.daemon")
-	cli_args = shlex.split(cli)
-
-
-	# If close_fds is true, all file descriptors except 0, 1 and 2 will be closed before the child process is executed.
-	proc = subprocess.Popen(
-			cli_args
-			# ,stdout=devnull
-			,stdout=subprocess.PIPE 
-			,stderr=subprocess.PIPE
-			# ,universal_newlines=True
-			# ,bufsize=0
-			# ,close_fds=False
-			)
-
-	print("Proc pooll", proc.poll( ) )
-	# when I start this the pipes get closed ?
-	set_fd_as_nonblocking( proc.stdout )
-	set_fd_as_nonblocking( proc.stderr )
-	# print("Proc pooll", proc.poll( ) )
-	# print("proc fds", proc.stdout, " " ,proc.stderr)
-	# print("messages", proc.stdout.readline() )
-
-	pipeListener = SelectBasedListener(logger,proc)
-
-	pipe2 = multiprocessing.Process( 
-		target=listen_to_fds,
-		args=( logger, proc )
-		)
-	# print("Proc pooll", proc.poll( ) )
-	# # to kill thread on program exit
-	pipeListener.daemon = True
-	pipeListener.start()
-	# print("Proc pooll", proc.poll( ) )
-	# # time.sleep(10)
+# 	# TODO even if we pass a logger name 
+# 	# we should prepend isix.daemon
+# 	logger = logging.getLogger("isix.daemon")
+# 	cli_args = shlex.split(cli)
 
 
-	while proc.poll() is None:
-		print("program still running", proc.returncode)
-		# sys.stderr.read()
-		data = proc.stdout.read()
-		if data:
-			print("Data", data)
-		time.sleep(1)
+# 	# If close_fds is true, all file descriptors except 0, 1 and 2 will be closed before the child process is executed.
+# 	proc = subprocess.Popen(
+# 			cli_args
+# 			# ,stdout=devnull
+# 			,stdout=subprocess.PIPE 
+# 			,stderr=subprocess.PIPE
+# 			# ,universal_newlines=True
+# 			# ,bufsize=0
+# 			# ,close_fds=False
+# 			)
+
+# 	print("Proc pooll", proc.poll( ) )
+# 	# when I start this the pipes get closed ?
+# 	set_fd_as_nonblocking( proc.stdout )
+# 	set_fd_as_nonblocking( proc.stderr )
+# 	# print("Proc pooll", proc.poll( ) )
+# 	# print("proc fds", proc.stdout, " " ,proc.stderr)
+# 	# print("messages", proc.stdout.readline() )
+
+# 	pipeListener = SelectBasedListener(logger,proc)
+
+# 	pipe2 = multiprocessing.Process( 
+# 		target=listen_to_fds,
+# 		args=( logger, proc )
+# 		)
+# 	# print("Proc pooll", proc.poll( ) )
+# 	# # to kill thread on program exit
+# 	pipeListener.daemon = True
+# 	pipeListener.start()
+# 	# print("Proc pooll", proc.poll( ) )
+# 	# # time.sleep(10)
+
+
+# 	while proc.poll() is None:
+# 		print("program still running", proc.returncode)
+# 		# sys.stderr.read()
+# 		data = proc.stdout.read()
+# 		if data:
+# 			print("Data", data)
+# 		time.sleep(1)
 
 
 

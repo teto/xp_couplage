@@ -63,7 +63,7 @@ def run_tests(args):
 
 
 
-config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__))  )
+# config.set("DEFAULT", "MainDir", os.path.realpath( os.path.dirname(__file__))  )
 
 # first need to compile module
 config.read("config.ini")

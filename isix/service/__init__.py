@@ -1,7 +1,7 @@
 import logging, logging.handlers
 import multiprocessing
 
-from isix.logging import core
+from isix.log import core
 
 logger = logging.getLogger("isix.daemon")
 
@@ -27,7 +27,8 @@ fileHandler = logging.FileHandler('isix.daemon.log')
 consoleHandler.setLevel( logging.DEBUG )
 fileHandler.setLevel( logging.DEBUG)
 
-
+formatter  = logging.Formatter('%(asctime)s %(levelname)s %(message)s' )
+consoleHandler.setFormatter ( formatter )
 #
 # we can passa list to it
 queueListener = logging.handlers.QueueListener(q, consoleHandler, fileHandler  )
@@ -41,5 +42,5 @@ logger.addHandler( queueHandler )
 
 queueListener.start()
 
-print("isix.daemon is available", logger)
+# print("isix.daemon is available", logger)
 # queueListener.join()

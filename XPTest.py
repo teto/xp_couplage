@@ -282,37 +282,56 @@ class XPTest:
 		results[0,] = fileSizes
 		# print("results", results )
 
+
+
 		# Look if there are any empty
+		# return result as a bool array.
 		#numpy.isnan(myarray).any()
+		# TODO go through the array with nenumerate looking for NaN and then filling up
 
 		# range(start,end) goes up to end - 1
-		for iteration in range(1,max_repeat + 1):
-			# results = [ ]
+		# TODO look for NAN, compute from its position 
+		# for iteration in range(1,max_repeat + 1):
+	
 
-			# do it size by size
-			#range(blockSize, maxSize, blockSize )
-			for no,fileSize in enumerate(fileSizes):
+		# do it size by size
+		#range(blockSize, maxSize, blockSize )
+		# for no,fileSize in enumerate(fileSizes):
 
-				fileToDownload= self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
-				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
+		# TODO do it on a masked array with NaN values
+		for index,value in np.ndenumerate(results):
+			# print("index", index, "/", index[1])
+			if not np.isnan(value):
+				logger.info("Value already valid at index [%d,%d], continuing ..."%(index[0],index[1]) )
+				continue;
 
-				
+			logger.info("Running unit test (%d ouf of %d) ..."%( index[0],max_repeat) )
+			fileSize = (index[1]+1)* blockSize
+			fileToDownload= self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
+			# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
 
-				MAX_ATTEMPT=3
-				for attempt in range(0,MAX_ATTEMPT):
-					try:
-						elapsedTime = self.run_unit_test(fileToDownload)
-						results[iteration, no] = elapsedTime
+			
 
-						# save intermediate results
-						self.saveResults( resultFilename, results )
+			MAX_ATTEMPT=3
+			for attempt in range(0,MAX_ATTEMPT):
+				try:
+					logger.info("Attempt %d out of %d..."%( attempt, MAX_ATTEMPT) )
+					elapsedTime = self.run_unit_test(fileToDownload)
+					# results[iteration, no] = elapsedTime
+					results[ index[0],index[1] ] = elapsedTime
+					# value = elapsedTime
+					# save intermediate results
+					self.saveResults( resultFilename, results )
+					
+					# it worked so we go to next test 
+					break;
 
-					except subprocess.CalledProcessError as e:
-						logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
-						if attempt < MAX_ATTEMPT:
-							continue;
-						else:
-							return False
+				except subprocess.CalledProcessError as e:
+					logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
+					if attempt < MAX_ATTEMPT:
+						continue;
+					else:
+						return False
 
 				# print("Results :", results )
 				# resultWriter.writerow(results)
@@ -367,7 +386,7 @@ class MPTCPWithoutLISP(XPTest):
 
 
 
-
+# TODO move that to isis manager
 # logging facility
 # FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
 # logging.basicConfig(format=FORMAT)

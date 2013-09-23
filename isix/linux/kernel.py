@@ -11,41 +11,64 @@ logger = logging.getLogger( __name__)
 logger.setLevel( logging.DEBUG )
 
 
+# list architectures from 
+SUPPORTED_ARCHITECTURES="x86 "
 
 
-
+# hérite de CompilableProgram ?
 class KernelSource:
 	
-	def __init__(self, src_dir):
-		if not os.path.isdir(src_dir):
-			raise Exception( src_dir + " is not a directory")
-		self.src_dir = src_dir
-		self.arch= "x86_64" # by default
+	def __init__(self, src_dir, arch="x86_64"):
 
-	#def set_arch() /get_arch
+		# self.arch= "x86_64" # by default
+		# super().__init__(src_dir)
+		self.set_arch(arch)
+		# self._supported_architectures
 
+		# add targets
+		# add_target("all","")
+
+	
+	"""
+	"""
+	def set_arch(self,arch):
+		if os.path.isdir( "{srcFolder}/arch/{architecture}".format(srcFolder=self.src_dir,architecture=arch) ):
+			self._arch = arch
+			return True
+		else:
+			logger.error("Unsupported architecture")
+			return False
+
+	def get_arch(self):
+		return self._arch
+
+	# Tout ca ce sont des targets
 	def compile(self):
-		return subprocess.check_call("make -C "+ self.src_dir + " -j5 all", shell=True)
+		pass
+		# return subprocess.check_call("make -C "+ self.src_dir + " -j5 all", shell=True)
 
 	def install(self):
-		return subprocess.check_call("make -C "+ self.src_dir + " install", shell=True)
+		pass
+		# return subprocess.check_call("make -C "+ self.src_dir + " install", shell=True)
 
 	def compile_module(self, module_dir ):
 		# if not os.path.isdir(module_dir):
 		# 	raise Exception( src_dir + " is not a directory")
 		#M= 
-		return subprocess.check_call("make -C "+ self.src_dir + " M="+module_dir, shell=True)
+		target = add_target()
+		target.launch()
+		# return subprocess.check_call("make -C "+ self.src_dir + " M="+module_dir, shell=True)
 		#return CompiledModule 
 
 
 	def install_module( self , module_dir ):
-		return subprocess.check_call("sudo make -C "+ self.src_dir + " M="+module_dir +" modules_install ", shell=True)
+		# return subprocess.check_call("sudo make -C "+ self.src_dir + " M="+module_dir +" modules_install ", shell=True)
+		pass
 
-
-	def install_modules( self ):
+	# def install_modules( self ):
 		
-		return subprocess.check_call("sudo make -C "+ self.src_dir + " modules_install ", shell=True)
-		#return False
+	# 	return subprocess.check_call("sudo make -C "+ self.src_dir + " modules_install ", shell=True)
+	# 	#return False
 
 
 

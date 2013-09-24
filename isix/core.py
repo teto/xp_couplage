@@ -5,6 +5,20 @@ from isix.network import natutils
 
 logger = logging.getLogger("isix")
 
+
+"""
+Base class of isix
+All modules should derive from this
+"""
+class Module:
+	def __init__(self,name):
+		self._name = name
+
+	def getName(self):
+		return self._name
+
+
+
 def parse_cli(args):
 
 	logger.debug("Parsing command line")

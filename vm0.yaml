@@ -1,0 +1,17 @@
+# UML VM
+# should load host to be able to enable NAT or not ?
+--- 
+kernel: /home/teto/mptcp87/uml/linux
+initramfs: /home/teto/uml/initramfs_mptcp
+rootfs: ~
+
+
+interfaces:  [
+# - { name: eth0, ip: 192.168.1.43,netmask: 255.255.255.0,gw: 192.168.1.1 }
+#eth0: !Interface &a
+# !!python/object:isix.network.interface.Interface 
+     {name: eth0, ip: 192.168.1.43,netmask: 255.255.255.0,gw: 192.168.1.1 }
+  ]
+# program.compilable:
+# - lispmob:
+#     bin: /home

@@ -15,8 +15,7 @@ Available here:
 -an ssh server running on both server
 -libnl installed
 -script folder should be in the PATH (transform into need to export a var in bash called $LISP_MPTCP_EXP_FOLDER (escape the $ in ssh command) )
-
-
+-add the isix folder to your PYTHONPATH environment variable
 
 You first need to properly configure the *.ini files.
 
@@ -42,5 +41,6 @@ TODO:
 -TODO ability to install every (via nsyslog ) ?
 -should be available to load pyro4 from remote (ssh)
 -shoulb be able to pass graph to trace (by referencing previous tests ? or datasets ?)
-
+- use shutil.copytree to build initramfs ?
+-need an expect system to automate sudo commands
 python3 -m Pyro4.naming

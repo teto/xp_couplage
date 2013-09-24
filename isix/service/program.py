@@ -2,7 +2,8 @@ import isix.service.daemon as service
 from isix.linux import fd
 import logging, subprocess
 import multiprocessing
-from isix.service import daemon
+import isix.service.daemon as ixdaemon
+import isix.core
 import os
 
 logger = logging.getLogger("isix")
@@ -18,7 +19,7 @@ MAKE = "usr/bin/make"
 #
 # start/stop
 # 
-class Program:
+class Program(isix.core.Module):
 
 	# subclass
 	class Target:
@@ -29,9 +30,17 @@ class Program:
 			self._command = command
 			self._program = program
 
+
 		def __call__(self,**kwargs):
 			print("Target called:", self._command )
-			pass
+			self.launch(**kwargs)
+
+		"""
+		Returns boolean
+		"""
+		def is_running(self):
+			return self._proc and self._proc.is_running()
+
 
 		def getCommand(self,raw=False):
 			if raw:
@@ -40,12 +49,15 @@ class Program:
 			return self._program._update_target(self._command)
 
 		def launch(self,blocking=True,stdoutLogger=None, stderrLogger=None,daemon=False):
+			
+			# TODO chech first it is not running 
 			# format the command 
+			# set proc to self._proc
 			command = self.getCommand()
 			
-			proc = daemon.create_process(command,stdoutLogger,stderrLogger)
-			if daemon:
-				proc.daemon= True
+
+			proc = ixdaemon.create_process(command,stdoutLogger,stderrLogger)
+			proc.daemon= daemon
 
 			proc.start()
 			if blocking:
@@ -59,19 +71,28 @@ class Program:
 	# TODO start command , stop is optional
 	# command,need_root=False
 	# root_directory
-	def __init__(self,name,targets=None):
+	# everything unknown goes to 
+	def __init__(self,name,targets=None, **kwargs):
+
+		super().__init__(name)
 
 		logger.debug("Creating program named [%s]"% name )
+		
+		# rename into targetArgs ?
 		self._dict = {
 			"sudo": SUDO_CMD,
-			"make": MAKE
+			# "make": MAKE
 		}
-		self._name = name
+		self._dict.update( kwargs )
+
+		# self._name = name
 		self._targets = {}
 		for targetName, command in targets.items():
 			self.add_target( targetName, command)
 		# self._command = command
 		# self._sudo = SUDO_CMD if need_root else ""
+
+		print("Extra args", self._dict)
 
 
 	def __repr__(self):
@@ -114,6 +135,7 @@ class Program:
 	
 
 	# self._dict.update()
+
 
 
 	# TODO rename

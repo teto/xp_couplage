@@ -8,6 +8,7 @@ import io
 import logging
 import isix.service.program as isprog
 import isix.network.interface as isnet
+import isix.uml.core as ixuml
 import yaml
 
 
@@ -25,8 +26,25 @@ def load_interface(section):
 	return isnet.Interface(**section)
 
 
+"""
+Returns a list of UML vms
+"""
+def load_umlvms(configFile):
 
-# def load_umlvm():
+	if type(configFile) is str:
+		configFile = open(configFile,"r" )
+	#hasattr(fname, 'readline') seems to be a better way
+	elif hasattr(configFile, 'readline'):
+	# elif isinstance(configFile,  io.TextIOWrapper):
+		pass
+
+	# load_all
+	vms = []
+	data = yaml.load_all( configFile )
+	for item in data:
+		print("data",data)
+		vms.append( ixuml.UMLVM(**item) )
+	return vms
 
 
 def load_program_section(section):
@@ -43,6 +61,7 @@ def describe_section( section ):
 sectionCallbacks = {
 # 'logger' :  isix.log.build_from_ini
 # logging.basicConfig
+'vm' : load_umlvms,
 'program' : load_program_section,
 # 'program.compilable' : load_compilable_program_section,
 # TODO could add 'program.compilable(program.compilable.make)'
@@ -60,7 +79,7 @@ sectionCallbacks = {
 
 return programs and config (somehow a hack)
 """
-def loadYamlFile(configFile):
+def loadHostFromYamlFile(configFile):
 
 	# for program/compilable program
 	modules = {}
@@ -78,6 +97,8 @@ def loadYamlFile(configFile):
 	elif hasattr(configFile, 'readline'):
 	# elif isinstance(configFile,  io.TextIOWrapper):
 		pass
+	else:
+		logger.error("unhandled case")
 
 
 
@@ -100,9 +121,10 @@ def loadYamlFile(configFile):
 				# TODO pass sthg into parenthesis eventually
 				# TODO check no duplicate 
 				# 
-				sectionName, val = sectionCallbacks[ sectionType ]( value )
-				print("Module name ", sectionName)
-				modules [sectionName] = val
+				module = sectionCallbacks[ sectionType ]( value )
+				modName = module.getName()
+				print("Module name [%s]"%modName )
+				modules [modName] = module
 
 				# logger.debug("Section taken into account by isix", elements)
 				# for option,value in config.items( section ):
@@ -111,7 +133,7 @@ def loadYamlFile(configFile):
 				logger.warning("freestyle section")
 
 		except KeyError as e:
-			logger.error("Option [%s] unavailable , ignoring module [%s] "%(e, sectionName ) )
+			logger.error("Option [%s] unavailable , ignoring module [%s] "%(e, modName) )
 
 	# print("programs", modules )
 	return modules , config
@@ -130,9 +152,10 @@ def main():
 	# should give the opportunity to override settings
 	args = parser.parse_args( sys.argv[1:] )
 
-	res = loadYamlFile(args.config)
+	#load_all
+	mods,extra = loadYamlFile(args.config)
 
-	print("res" , res)
+	print("res" , mods["lispmob"])
 
 
 
@@ -140,3 +163,5 @@ def main():
 
 if __name__ == '__main__':
 	main()
+
+

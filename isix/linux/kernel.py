@@ -16,6 +16,7 @@ SUPPORTED_ARCHITECTURES="x86 "
 
 
 # hérite de CompilableProgram ?
+# TODO set O option => Output folder 
 class KernelSource:
 	
 	def __init__(self, src_dir, arch="x86_64"):
@@ -31,6 +32,7 @@ class KernelSource:
 	
 	"""
 	"""
+	#,outputFolder
 	def set_arch(self,arch):
 		if os.path.isdir( "{srcFolder}/arch/{architecture}".format(srcFolder=self.src_dir,architecture=arch) ):
 			self._arch = arch

@@ -46,6 +46,9 @@ class Host:
 		self._programs, self.config = loader.loadConfigFile( config )
 		# self.config = config
 
+	# define to launch server
+	# def __enter__(self):
+	# def __exit__(self):
 
 	# def start_daemon():
 	# def start_foreground():

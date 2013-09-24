@@ -382,7 +382,10 @@ class MPTCPWithLisp(XPTest):
 
 
 class MPTCPWithoutLISP(XPTest):
-	pass
+	
+	def __init__(self,cfg_file, localhost,remotehost):
+		super().__init__( "mptcpwithoutlisp",cfg_file,localhost, remotehost, False, True )
+		
 
 
 

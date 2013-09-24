@@ -16,17 +16,6 @@ logger = logging.getLogger("isix.loader")
 
 logger.setLevel( logging.WARNING )
 
-
-class HostLoader:
-	def __init__(self):
-		pass
-
-	def load(self,):
-		pass
-
-	def load_program_section()
-
-
 # TODO retrieve main logger 
 # test derives de 
 # test( isix.program ) lispmob

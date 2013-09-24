@@ -1,0 +1,67 @@
+# shows beginning of the document
+#!!python/object:isix.uml.vm.VM
+--- 
+#!Interfaces !!python/object:isix.network.interface.InterfaceList 
+# network.interfaces:  [
+# # - { name: eth0, ip: 192.168.1.43,netmask: 255.255.255.0,gw: 192.168.1.1 }
+# #eth0: !Interface &a
+# # !!python/object:isix.network.interface.Interface 
+#      {name: eth0, ip: 192.168.1.43,netmask: 255.255.255.0,gw: 192.168.1.1 }
+#    ]
+   # eth1: !Interface *a
+# --- 
+# monster: !Monster
+#  name: Cave spider
+#  hp: [2,6]    # 2d6
+#  ac: 16
+#  attacks: [BITE, HURT]
+
+
+# Host
+# ce qui est en extra doit apparaitre comme defaut sauf si c'est un dict
+make_bin: &make_bin /usr/bin/make
+
+# buildsystem:
+# - {name: make}
+
+program:
+  name: kernel
+  jobs: 5
+  arch: um
+  src: /home/teto/xp_couplage/mptcp0.86
+  sudo: /usr/bin/sudo
+  output: /home/teto/xp_couplage/uml
+  # TODO add make_uml/make_x86
+  targets:
+    install: "ARCH={arch} {sudo} make install"
+    build: "{sudo} make all -j{jobs} -O={output}"
+
+
+program: 
+  name: lispmob
+  srcFolder: /home/teto/lispmob
+  make: *make_bin
+  # buildsystem: [make, srcFolder, jobs ]
+  targets:
+    start: ./test.sh
+    stop:  "{make} -C {srcFolder}"
+    build: test 
+    clean: hello
+
+program:
+  name: lig_daemon
+  targets:
+    start: ~
+    killall: ~
+
+
+# kernel
+# kernel.module:
+
+program:
+  name: lig_module
+  targets:
+    build: ~
+    start:
+    stop:
+

@@ -14,10 +14,12 @@ import logging
 import io
 
 # call it core or common
-import isix.linux.core as linux
-from isix.config import loader
-import isix.linux.module
-import isix.network.mptcp as mptcp
+from .linux import kernel as linux_core
+# from .config import ini as loader
+# from .config import yaml_ as loader
+from .config import loader as loader
+from .linux import module as linux_module
+from .network import mptcp as mptcp
 
 
 logger = logging.getLogger( "isix" )
@@ -42,16 +44,14 @@ class Host:
 	# config might be of several types
 	def __init__(self, config):
 
-		#
+		# configLoader = loader.createLoader(config)
+
 		self._programs, self.config = loader.loadConfigFile( config )
 		# self.config = config
 
 	# define to launch server
 	# def __enter__(self):
 	# def __exit__(self):
-
-	# def start_daemon():
-	# def start_foreground():
 
 	# TODO check
 	def getEID(self):
@@ -65,6 +65,7 @@ class Host:
 
 	def getIp(self):
 		# return "127.0.0.1"
+		# TODO use my libnl there
 		return Pyro4.socketutil.getIpAddress("localhost", workaround127=True, ipVersion=None)
 
 	# TODO should use pyroute2 
@@ -75,7 +76,10 @@ class Host:
 
 	def getWebfsUrl(self):
 		# print ( "webfs port" , self.config["webfs"]["port"] )
-		return "http://"+self.getEID() + ":" + self.config["webfs"]["port"]
+		# return "http://"+ str(self.getEID() ) + ":" + str( self.config["webfs"]["port"] )
+		# print("self EID", self.getEID() )
+		# print("Webfs port", self.config["webfs"]["port"] )
+		return "http://{host}:{port}".format( host=self.getEID(), port=self.config["webfs"]["port"])
 
 
 	""" ping timeouts after 3 sec"""
@@ -95,45 +99,6 @@ class Host:
 
 	# should check if it's in its abilities
 	# def __call__():
-
-	# def kernel(self,action):
-	# 	return getattr(self.kernel,action)();
-
-	# def daemon(self,action):
-	# 	print ("daemon subparser:", action );
-	# 	#daemon = lispmob.Program();
-	# 	# special usecase
-	# 	if action == "compile":
-	# 		cmd = "{1}/build.sh {2} {1} {0}".format(
-	# 			self.config['daemon']['bin'],
-	# 			self.config['daemon']['src'],
-	# 			self.config['kernel']['src']) 
-	# 		return subprocess.check_call( cmd ,shell=True)
-	# 	else:
-	# 		return getattr(self.lisp_daemon,action)();
-	# elif action == "load":
-	#     return subprocess.check_call("sudo "+ self.config['daemon']['bin'])
-	# else:
-	#     #
-	#     return os.system("sudo killall -r lig_daemon*)")
-
-	# def module(self,action):
-
-	# 	print("Handling module with action:" + action);
-
-		
-	# 	if action == "compile":
-	# 		kernel = linux.KernelSource( self.config['kernel']['src']);
-		
-	# 		kernel.compile_module( self.config['module']['src'])
-	# 		kernel.install_module( self.config['module']['src'])
-	# 	elif action == "load":
-	# 		self.mod.load()
-	# 	else:
-	# 		self.mod.unload()
-
-	# 	print ("Module loaded ", self.mod.is_loaded())
-
 
 
 # raise NotImplementedError

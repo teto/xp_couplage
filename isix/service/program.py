@@ -72,7 +72,7 @@ class Program(isix.core.Module):
 	# command,need_root=False
 	# root_directory
 	# everything unknown goes to 
-	def __init__(self,name,targets=None, **kwargs):
+	def __init__(self, name, targets=None, **kwargs):
 
 		super().__init__(name)
 
@@ -87,6 +87,7 @@ class Program(isix.core.Module):
 
 		# self._name = name
 		self._targets = {}
+		targets = {} if targets==None else targets
 		for targetName, command in targets.items():
 			self.add_target( targetName, command)
 		# self._command = command

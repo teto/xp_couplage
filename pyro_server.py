@@ -356,8 +356,8 @@ if __name__ == '__main__':
 	parser.add_argument('xpconfig', default="tests.ini", action="store", type=str,  help="Config filename. Describe experiment settings")
 
 	# should give the opportunity to override settings
-
-	parser.add_argument('hostconfigfile', action="store", type=argparse.FileType('r'), help="remote ip or hostname")
+	# argparse.FileType('r')
+	parser.add_argument('hostconfigfile', action="store", type=str, help="remote ip or hostname")
 
 	parser.add_argument('localhost', action="store", nargs="?", help="local ip or hostname")
 	parser.add_argument('--ns', action="store", nargs="?", help="hello" ) #ns_parser.print_help() )

@@ -6,9 +6,9 @@ import argparse
 import os
 import io
 import logging
-import isix.service.program as isprog
-import isix.network.interface as isnet
-import isix.uml.core as ixuml
+from ..service import program as isprog
+from ..network import interface as isnet
+from ..uml import core as ixuml
 import yaml
 
 
@@ -79,7 +79,8 @@ sectionCallbacks = {
 
 return programs and config (somehow a hack)
 """
-def loadHostFromYamlFile(configFile):
+
+def loadHostFromYaml(configFile):
 
 	# for program/compilable program
 	modules = {}
@@ -138,6 +139,8 @@ def loadHostFromYamlFile(configFile):
 	# print("programs", modules )
 	return modules , config
 
+# for compatibility reasons
+# loadHostFromYamlFile = loadConfigFile
 
 
 

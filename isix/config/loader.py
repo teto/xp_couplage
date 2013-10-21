@@ -5,7 +5,9 @@ import argparse
 import os
 import io
 import logging
-from isix.service import program
+from . import yaml_ as yaml
+from . import ini as ini
+from ..service import program as program
 
 # import 
 # import file
@@ -17,9 +19,32 @@ logger = logging.getLogger("isix.loader")
 logger.setLevel( logging.DEBUG )
 
 
+supportedExtensions= {
+	".ini" : ini.loadHostFromIni,
+	".yaml": yaml.loadHostFromYaml
+}
+
+
+#
+
+def loadConfigFile(filename):
+	# 
+	extension = os.path.splitext(filename)[1]
+	
+	try:
+		return supportedExtensions[ extension ] (filename)
+
+	except KeyError as e:
+		logger.error("No loader registered for extension [%s]"%extension)
+
+
+
+
 class Loader:
 	def __init__(self):
 		pass
+
+
 
 	def loadHost(self,):
 		pass

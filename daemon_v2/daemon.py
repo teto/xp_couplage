@@ -72,7 +72,7 @@ class LigDaemon:
 		self.lig_program 	= lig_program
 
 
-
+		# TODO replace by Socket
 		# allocates callback
 		tx_cb = nl.nl_cb_alloc(nl.NL_CB_DEFAULT)
 
@@ -311,6 +311,12 @@ def msg_handler(m, arg):
 	# return nl.NL_OK
 	return nl.NL_SKIP 
 
+###############################
+###############################
+## TO TEST LIBNL (remove later)
+###############################
+# msg_handler = "hello world"
+# ack_handler = None
 
 if __name__ == '__main__':
 
@@ -347,7 +353,8 @@ if __name__ == '__main__':
 
 
 	except Exception as e:
+		# (type, value, traceback)
 		(t, v, tb) = sys.exc_info()
-		print("hello world",v.message)
+		print("hello world",v )
 		traceback.print_tb(tb)
 

@@ -8,7 +8,7 @@ import argparse
 import sys
 import logging
 import inspect
-import host
+# import host
 # import nat
 import configparser
 import os
@@ -306,8 +306,10 @@ class XPTest:
 				continue;
 
 			logger.info("Running unit test (%d ouf of %d) ..."%( index[0],max_repeat) )
-			fileSize = (index[1]+1)* blockSize
-			fileToDownload= self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
+			fileSize = (index[1]+1) * blockSize
+
+			print( "webfs url",self.remotehost.getWebfsUrl())
+			fileToDownload= ""+ self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
 			# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
 
 			
@@ -436,7 +438,8 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# TODO needs to create objects now
 	# we should
 
-	localhost = host.Host( "client.ini" ) 
+	localhost = host.Host( "client.yaml" ) 
+	# localhost = host.Host( "client.ini" ) 
 
 	uri=None
 	# ns = None

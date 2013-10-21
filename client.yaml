@@ -65,3 +65,12 @@ program:
     start:
     stop:
 
+
+webfs:
+  port: 8000
+  
+program:
+  name: webfs
+  files_folder: /home/teto/xp_couplage/xpfiles
+  port:  8000
+  targets:

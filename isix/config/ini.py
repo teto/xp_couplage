@@ -91,7 +91,7 @@ def describe_section( section ):
 
 return programs and config (somehow a hack)
 """
-def loadConfigFile(configFile):
+def loadHostFromIni(configFile):
 
 	# for program/compilable program
 	modules = {}

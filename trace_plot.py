@@ -26,8 +26,12 @@ parser = argparse.ArgumentParser(
 parser.add_argument('config_file', type=argparse.FileType('r') ,
 		  help="Choose plot configuration file")
 
-# parse 
-args = parser.parse_args( [ sys.argv[1] ] )
+
+if len(sys.argv) < 1:
+	print("Choose a graph definition file as a parameter (graph1.ini for instance)")
+	exit(1)
+
+args = parser.parse_args( [ sys.argv[1] ]  )
 
 
 # TODO draw with error bars

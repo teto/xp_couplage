@@ -19,7 +19,9 @@ import datetime
 import csv
 import numpy as np
 import isix.host as host
+import isix.experiments.SQLiteDataSet as sqlite_ds
 import sqlite3 as db
+import itertools
 
 # timeout before locateNS failure 
 Pyro4.config.COMMTIMEOUT = 3
@@ -115,12 +117,13 @@ class XPTest:
 		self._remotehost.mptcp_set_state(enable_mptcp);
 
 		# db connection
-		self._db_con = None
+		self._db = None
 
 	def __del__(self):
-		if self._db_con:
-			logger.debug("Closing connection to database")
-			self._db_con.close()
+		pass
+		# if self._db_con:
+		# 	logger.debug("Closing connection to database")
+		# 	self._db_con.close()
 
 
 	# computes the filename where to register results
@@ -195,45 +198,63 @@ class XPTest:
 
 	# should be called from each child 
 	# before launching tests
-	def prepare(self, resume_from_results):
+	def prepare(self, objectives, resume_from_results):
 
 		# check if folder exists
-		dirname = self._config["results"]["folder"]
-		if not check_for_folder(dirname):
-			return False
+		# dirname = self._config["results"]["folder"]
+		# if not check_for_folder(dirname):
+		# 	return False
 
 		db_filename = self.getResultsFilename()
-		if resume_from_results and os.path.isfile(resume_from_results):
+		if resume_from_results:
+		# and os.path.isfile(resume_from_results):
 			db_filename=resume_from_results
 
+		self._db = sqlite_ds.SQLiteDataSet(db_filename)
+
+		# TODO compare objectives with already existing results
+		# 
+		fileSizes = {}
+		self._fileSizes = {}
+		existing = self._db.getStats()
+		for fileSize, count in objectives.items():
+			fileSizes[ fileSize ] = count - existing.get(fileSize, 0 )
+
+		self._fileSizes = fileSizes
+
+
 		# db_connection
-		self._db_con = db.connect( db_filename )
-		self._db_con.row_factory = db.Row                # accès facile aux colonnes
+		# self._db_con = db.connect( db_filename )
+		# self._db_con.row_factory = db.Row                # accès facile aux colonnes
 
-		cur = self._db_con.cursor()                             # obtention d'un curseur
+		# cur = self._db_con.cursor()                             # obtention d'un curseur
 		
-		# if new set of results table
-		if not resume_from_results:
-			#experiment INTEGER,
-		    cur.executescript("""
-		    CREATE TABLE results(
-		        filesize INTEGER,
-		        duration REAL,
-		        id INTEGER PRIMARY KEY AUTOINCREMENT
-		        );
+		# # if new set of results table
+		# if resume_from_results:
+		# 	stats = ds.getResultStats ()
 
-		    CREATE TABLE tcp_stats(
-		        min_rtt REAL DEFAULT 0,
-		        max_rtt REAL DEFAULT 0,
-		        avg_rtt REAL DEFAULT 0,
-		        result_id INTEGER
-		        )
+		# else:
+
+		# 	#experiment INTEGER,
+		#     cur.executescript("""
+		#     CREATE TABLE IF NOT EXISTS results(
+		#         filesize INTEGER,
+		#         duration REAL,
+		#         id INTEGER PRIMARY KEY AUTOINCREMENT
+		#         );
+
+		#     CREATE TABLE IF NOT EXISTS tcp_stats(
+		#         min_rtt REAL DEFAULT 0,
+		#         max_rtt REAL DEFAULT 0,
+		#         avg_rtt REAL DEFAULT 0,
+		#         result_id INTEGER
+		#         )
 
 
-		    """)
+		#     """)
 		# if self.check_connectivity() != 0:
 		# 	return False
-		self._db_con.commit()
+		# self._db_con.commit()
 
 		# return self.generateTestFiles()
 		return True
@@ -247,7 +268,7 @@ class XPTest:
 		MAX_ATTEMPT=3
 		for attempt in range(1,MAX_ATTEMPT):
 			try:
-				logger.info("Attempt %d out of %d..."%( attempt, MAX_ATTEMPT) )
+				logger.info("Attempt %d out of %d possible..."%( attempt, MAX_ATTEMPT) )
 				# will produce sthg like
 				#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
 				# be careful
@@ -292,7 +313,7 @@ class XPTest:
 
 
 	# blockSize min/max/avg/all the results
-	def launch(self, fileSizes):
+	def launch(self):
 
 		resultFilename = self.getResultsFilename()
 
@@ -302,20 +323,22 @@ class XPTest:
 
 		
 
-		cur = self._db_con.cursor()
-
-		for fileSize in fileSizes:
-		
-
-			# logger.info("Running unit test (%d ouf of %d) ..."%( index[0]) )
-			# fileSize = (index[1]+1) * blockSize
-			print( "webfs url",self._remotehost.getWebfsUrl())
+		# cur = self._db_con.cursor()
+		for fileSize, count in self._fileSizes.items():
+			
+			
 			fileToDownload= ""+ self._remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
-			# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
-			result = self.run_unit_test(fileToDownload)
-			# TODO save result into DB
-			cur.execute("INSERT INTO results(filesize, duration) VALUES(?,?)", (fileSize, result) )
-			self._db_con.commit()
+
+			print( "[%d] iterations needed to complete results for the size [%d]"%(count, fileSize ) )
+			for iteration in range(1,count+1):
+				logger.info("Running unit test (%d ouf of %d) ..."%( iteration, count) )
+				# fileSize = (index[1]+1) * blockSize
+				# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
+				result = self.run_unit_test(fileToDownload)
+				# TODO save result into DB
+				# cur.execute("INSERT INTO results(filesize, duration) VALUES(?,?)", (fileSize, result) )
+
+				self._db.addResult( fileSize, result )
 
 		return True;
 
@@ -430,17 +453,38 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# TODO handle that error case
 	remotehost = Pyro4.Proxy(uri)
 
+
+	#########################################################
+	### Compute wanted results
+	#########################################################
+	blockSize= config.getint("xp","blockSize")
+	maxSize	 = config.getint("xp","maxFileSize")
+	repeat	 = config.getint("xp","repeat")
+
+	# TODO generate number of keys
+	# range( , maxSiz)		
+	fileSizes = range(blockSize, maxSize, blockSize )
+	# fileSizes = dict( itertools.zip_longest( fileSizes, fillvalue=repeat ) )
+	temp = {}
+	for size in fileSizes:
+		temp[size] = repeat
+	print("filesize", temp )
+	# fileSizes = dict( list(zip( fileSizes, list(map( lambda x: repeat, fileSizes) ) ) ) )
+
+
+
 	# instanciate test class XPTest
 	# settings_file
 	test = getattr( sys.modules[__name__], test_name)( config, localhost,remotehost );
 	logger.info ("Prelaunching operations");
-	if not test.prepare(resume_from_results):
+	if not test.prepare( temp, resume_from_results):
 		logger.error ( "failed preparing test '"+ test.name + "' ")
 		return False
 
 	# rename to run
-	# TODO generate number of keys
-	for attempt in config["xp"]["max_repeat"]:
+
+	
+	for attempt in config["xp"]["repeat"]:
 
 		if not test.launch():
 			logger.error ( "failed running test '"+ test.name + "' ")
@@ -477,15 +521,15 @@ if __name__ == '__main__':
 	parser.add_argument('config_file', type=argparse.FileType("r"), help="Describe experiment settings")
 	parser.add_argument('remotehost', action="store",help="remote ip or hostname")
 	# define it into config file for now
-	parser.add_argument('remoteport', action="store",type=int,nargs="?", help="ssh port ? in order to launch server")
+	# parser.add_argument('remoteport', action="store",type=int,nargs="?", help="ssh port ? in order to launch server")
 	# FileType
 	
 	parser.add_argument('--simulate', action="store_true", help="Describe experiment settings")
 
 	# parser.add_argument('remote_ip', help="IP of the other host of the experiment")
 
-
-	parser.add_argument('tests', choices=["TCPWithoutLISP","TCPWithLISP","MPTCPWithLISP","MPTCPWithoutLISP"], nargs="+", help='list of tests, their ')
+	# nargs="+"
+	parser.add_argument('tests', choices=["TCPWithoutLISP","TCPWithLISP","MPTCPWithLISP","MPTCPWithoutLISP"], nargs=1, help='list of tests, their ')
 	parser.add_argument('existing_results', nargs="?", help='Gives a previous file result you want to resume ')
 	# tests_parser.set_defaults(func=run_tests)
 

@@ -3,6 +3,7 @@ from . import manager as mgr
 import sqlite3 as db
 import logging
 import argparse
+import sys
 
 logger = logging.getLogger()
 
@@ -19,6 +20,17 @@ class SQLiteDataSet(mgr.FileDownloadData):
             # logger.debug("Closing connection to database")
             self._conn.close()
 
+    def addResult(self, fileSize, result):
+        self._cur.execute("INSERT INTO results(filesize, duration) VALUES(?,?)", (fileSize, result) )
+        self._conn.commit()
+
+    def getStats(self):
+        # results 
+        self._cur.execute( "SELECT filesize,count(*) FROM results GROUP BY filesize " )
+        results = [ (i[0],i[1]) for i in self._cur ]
+        return dict( results )
+
+
     def getAvg(self, keys):
         
         # TODO display on how many items it was done 
@@ -27,7 +39,7 @@ class SQLiteDataSet(mgr.FileDownloadData):
 
         # GROUP BY key AVG(duration), 
         # , (key,)
-        self._cur.execute( "SELECT [t=filesize],AVG(duration),min(duration),max(duration),count(*) FROM results GROUP BY filesize " )
+        self._cur.execute( "SELECT filesize,AVG(duration),min(duration),max(duration),count(*) FROM results GROUP BY filesize " )
         # print( self._cur )
         # print( "row count", self._cur.rowcount)
         for i in self._cur:
@@ -58,6 +70,23 @@ class SQLiteDataSet(mgr.FileDownloadData):
         self._conn.row_factory = db.Row                # accès facile aux colonnes
 
         self._cur = self._conn.cursor()                             # obtention d'un curseur
+        self._cur.executescript("""
+            CREATE TABLE IF NOT EXISTS results(
+                filesize INTEGER,
+                duration REAL,
+                id INTEGER PRIMARY KEY AUTOINCREMENT
+                );
+
+            CREATE TABLE IF NOT EXISTS tcp_stats(
+                min_rtt REAL DEFAULT 0,
+                max_rtt REAL DEFAULT 0,
+                avg_rtt REAL DEFAULT 0,
+                result_id INTEGER
+                )
+
+
+            """)
+        self._conn.commit()
         
     def getMin(self,keys):
         pass
@@ -107,6 +136,8 @@ if __name__ == '__main__':
 
 
     ds = SQLiteDataSet(args.results)
-    keys = [ '512', '1024']
-    print( "Avg", ds.getAvg(keys) )
-    print( "Min", ds.getMin(keys) )
+    # keys = [ '512', '1024']
+    # print( "Avg", ds.getAvg(keys) )
+    # print( "Min", ds.getMin(keys) )
+    stats = ds.getStats ()
+    # print( "Statistics" , stats[512] )

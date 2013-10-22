@@ -82,8 +82,8 @@ def drawPlot(dataFilename):
     print("min",  minValues )
     print("high", maxValues )
 
-    # errors relative to data set
-    yerr= maxValues- avg, avg-minValues
+    # errors relative to data set. Is a tuple
+    yerr= (maxValues- avg, avg-minValues,)
     print("Compute xerr, yerr",yerr)
 
 

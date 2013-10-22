@@ -63,28 +63,6 @@ args = parser.parse_args( sys.argv[1:] )
 
 
 
-# 
-
-# returns indices
-# ligne/colonne
-# arange(x) generate a flat array of x entries starting from 0 to x-1
-
-def getHighestRowResults( arr):
-	# temp = np.arange(3)
-	# indices = res.argmax( axis=0)
-	# print("max", indices, arr[indices, temp] )
-	# return arr[ arr.argmax( axis=0), np.arange(3) ] 
-	return arr.max(axis=0)
-
-
-def getLowestRowResults( arr):
-	# temp = 
-	# indices = 
-	# return arr[ arr.argmin( axis=0), np.arange(3) ] 
-	return arr.min(axis=0)
-
-def getAverageRowResults( arr ):
-	return arr.mean(  axis=0)
 
 
 
@@ -93,26 +71,6 @@ def drawPlot(dataFilename):
 	# TODO need to get 
 	print("Drawing plot for dataset ", dataFilename)
 
-	# resultsFilename= "/home/teto/xp_couplage/results/tcpwithoutlisp_1509_2118.csv"
-	# TODO use numpy to load data
-	# np.array
-	# names = True reads column names from data
-	# res = np.loadtxt( dataFilename, 
-	# 				dtype=None, 
-	# 				comments="#",
-	# 		#, names=True
-	# 		 		delimiter=","
-	# 		)
-
-	# fileSizes = res[0,]
-	# print("file sizes:\n", fileSizes)
-	# res= res[1:,]
-	# mean = res.mean()
-	# avg = getAverageRowResults ( res)
-	# minValues = getLowestRowResults ( res)
-	# maxValues = getHighestRowResults ( res)
-	# errors relative to data set
-	# yerr= maxValues- avg, avg-minValues
 
 
 	res = ds.SQLiteDataSet(dataFilename) 
@@ -123,19 +81,19 @@ def drawPlot(dataFilename):
 	limit = 5
 	for index, nb in enumerate(rowcounts):
 		if nb < limit:
-			print('Results are too few: ', nb , ' results for key ', keys )
+			print('Results are too few: ', nb , ' results for key ', keys[index] )
 	
 
 
 
 
 
-	print("mean", avg )
-	print("min",  minValues )
-	print("high", maxValues )
+	# print("mean", avg )
+	# print("min",  minValues )
+	# print("high", maxValues )
 
 
-	print("Compute xerr, yerr",yerr)
+	# print("Compute xerr, yerr",yerr)
 
 
 	#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)

@@ -19,6 +19,7 @@ import datetime
 import csv
 import numpy as np
 import isix.host as host
+import sqlite3 as db
 
 # timeout before locateNS failure 
 Pyro4.config.COMMTIMEOUT = 3
@@ -86,11 +87,19 @@ class XPTest:
 	# for key in kwargs
 	def __init__(self, name, cfg, localhost, remotehost, enable_lisp, enable_mptcp):
 		
-		self.name = name
+		self._name = name
 
-		self.config = cfg
-		self.localhost = localhost
-		self.remotehost = remotehost
+		self._config = cfg
+		self._localhost = localhost
+		self._remotehost = remotehost
+
+		# range start/stop/step
+	
+		
+		# max_repeat = self.config.getint("xp","repeat")
+
+		self._blockSize= self._config.getint("xp","blockSize")
+		self._maxSize	 = self._config.getint("xp","maxFileSize")
 
 		# replace by enable (True/False) ?
 		print("enable lisp", enable_lisp)
@@ -102,17 +111,17 @@ class XPTest:
 
 
 		# TODO check routes are ok 
-		self.localhost.mptcp_set_state(enable_mptcp);
-		self.remotehost.mptcp_set_state(enable_mptcp);
+		self._localhost.mptcp_set_state(enable_mptcp);
+		self._remotehost.mptcp_set_state(enable_mptcp);
 
-	# run a command locally
-	# def local(self, cmd):
-	# 	do_ssh("127.0.0.1", cmd );
+		# db connection
+		self._db_con = None
 
-	# def remote(self, test ):
-	# 	pass
+	def __del__(self):
+		if self._db_con:
+			logger.debug("Closing connection to database")
+			self._db_con.close()
 
-	# run a command remotely
 
 	# computes the filename where to register results
 	def getResultsFilename(self):
@@ -120,7 +129,7 @@ class XPTest:
 		now = datetime.datetime.now()
 		#%Y for year , %H for hour (24h), %M for padded minute
 		# rename into numpy format ?
-		resultFilename = now.strftime(MainDir+"/results/"+self.name+"_%d%m_%H%M.csv")
+		resultFilename = now.strftime(MainDir+"/results/"+self._name+"_%d%m_%H%M.csv")
 
 		return resultFilename
 
@@ -128,9 +137,10 @@ class XPTest:
 	# def download_file():
 	def check_connectivity(self):
 		# TODO localhost.check_connectivity( remotehost )
-		logger.info("Checking connectivity")
+		remotehost = self._remotehost.getEID()
+		logger.info("Checking connectivity with [%s]"%remotehost)
 		#os.system("wget  --timeout 3 -O -  "+ self.remotehost.address +" > /dev/null")
-		return self.localhost.ping( self.remotehost.getEID() )
+		return self._localhost.ping( remotehost )
 		#return subprocess.call("ping ") ;
 
 
@@ -138,17 +148,17 @@ class XPTest:
 	def generateTestFileSizes(self):
 		
 
-		blockSize= self.config.getint("xp","blockSize")
-		maxSize	 = self.config.getint("xp","maxFileSize")
+		# blockSize= self._config.getint("xp","blockSize")
+		# maxSize	 = self._config.getint("xp","maxFileSize")
 		# max_repeat = self.config.getint("xp","repeat")
 
-		return range(blockSize, maxSize, blockSize )
+		return range(blockSize, self._maxSize, self._blockSize )
 
 
 
 
 	def generateTestFiles(self):
-		filesFolder = self.config["xp"]["files_folder"]
+		filesFolder = self._config["xp"]["files_folder"]
 
 		if not check_for_folder(filesFolder):
 			return False
@@ -156,18 +166,18 @@ class XPTest:
 		logger.info("generating files to download for XP into %s"%filesFolder )
 		# what happens if files already exist ?
 		
-		blockSize= self.config.getint("xp","blockSize")
+
 		# maxSize	 = self.config.getint("xp","maxFileSize")
 		# max_repeat = self.config.getint("xp","repeat")
 		temp = self.generateTestFileSizes()
 		print ("temp", temp)
-		print ("block size ",blockSize)
+		print ("block size ", self._blockSize)
 		for size in temp:
 			res = subprocess.call(["dd","if=/dev/urandom" ,
 						"of={folder}/{fileSize}.bin".format(folder=filesFolder, fileSize=size),
 						# "bs=\"%dk\""%blockSize,
-						"bs=%dk"%blockSize,
-						"count=%d"%(size/blockSize)
+						"bs=%dk"%self._blockSize,
+						"count=%d"%(size/self._blockSize)
 						],
 						# stdout=subprocess.STDOUT,
 						# stderr=subprocess.STDOUT
@@ -185,14 +195,45 @@ class XPTest:
 
 	# should be called from each child 
 	# before launching tests
-	def prepare(self):
+	def prepare(self, resume_from_results):
+
 		# check if folder exists
-		dirname = self.config["results"]["folder"]
+		dirname = self._config["results"]["folder"]
 		if not check_for_folder(dirname):
 			return False
 
+		db_filename = self.getResultsFilename()
+		if resume_from_results and os.path.isfile(resume_from_results):
+			db_filename=resume_from_results
+
+		# db_connection
+		self._db_con = db.connect( db_filename )
+		self._db_con.row_factory = db.Row                # accès facile aux colonnes
+
+		cur = self._db_con.cursor()                             # obtention d'un curseur
+		
+		# if new set of results table
+		if not resume_from_results:
+			#experiment INTEGER,
+		    cur.executescript("""
+		    CREATE TABLE results(
+		        filesize INTEGER,
+		        duration REAL,
+		        id INTEGER PRIMARY KEY AUTOINCREMENT
+		        );
+
+		    CREATE TABLE tcp_stats(
+		        min_rtt REAL DEFAULT 0,
+		        max_rtt REAL DEFAULT 0,
+		        avg_rtt REAL DEFAULT 0,
+		        result_id INTEGER
+		        )
+
+
+		    """)
 		# if self.check_connectivity() != 0:
 		# 	return False
+		self._db_con.commit()
 
 		# return self.generateTestFiles()
 		return True
@@ -202,157 +243,88 @@ class XPTest:
 	def run_unit_test(self, fileToDownload):
 
 		logger.info("Downloading file %s", fileToDownload)
-
-		# will produce sthg like
-		#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
-		# be careful
-		# time utility sends its output on stderr by default
-		time = subprocess.check_output(
-			["/usr/bin/time", 
-			"-f", # to specify format
-			"%e" , # elapsed time
-			"wget",
-			"--tries",
-			"1",
-			"--timeout",
-			"1",
-			 "-q",
-			 "-O",
-			 "/dev/null",
-			 # " - ",
-			 fileToDownload
-			#, shell=True
-			],
-			stderr=subprocess.STDOUT
-			);
-		# append exection time.decode()
-		elapsedTime = time.decode().rstrip()
-		print("Result %s"% elapsedTime )
 		
-		return ( elapsedTime )
-		# results.append( time.decode().rstrip() )
-		
-		
-			# print( "res",results )
-		# 
-		#with tempfile.TemporaryFile() as fp:
+		MAX_ATTEMPT=3
+		for attempt in range(1,MAX_ATTEMPT):
+			try:
+				logger.info("Attempt %d out of %d..."%( attempt, MAX_ATTEMPT) )
+				# will produce sthg like
+				#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
+				# be careful
+				# time utility sends its output on stderr by default
+				time = subprocess.check_output(
+					["/usr/bin/time", 
+					"-f", # to specify format
+					"%e" , # elapsed time
+					"wget",
+					"--tries",
+					"1",
+					"--timeout",
+					"1",
+					 "-q",
+					 "-O",
+					 "/dev/null",
+					 # " - ",
+					 fileToDownload
+					#, shell=True
+					],
+					stderr=subprocess.STDOUT
+					);
+				# append exection time.decode()
+				elapsedTime = time.decode().rstrip()
+				print("Result %s"% elapsedTime )
+				
+				return ( elapsedTime )
+				# it worked so we go to next test 
+				break;
 
-	def saveResults(self,resultFilename,results):
-		np.savetxt( resultFilename, results, fmt="%.3f",delimiter="," )
+			except subprocess.CalledProcessError as e:
+				logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
+				if attempt < MAX_ATTEMPT:
+					continue;
+				else:
+					return False
 
-	# after launching tests
-	# generate a file in ./results with name
-	# nameXP_date_time.data
-	#  The file adopts the format (per line)
+
+	def saveResult(self, result):
+		# self._db_con
+		pass
+
+
 	# blockSize min/max/avg/all the results
-	def launch(self):
-		# should launch a run 
-		# TODO create a temporary directory with
-		# temporary files
-		# then aggregate everything into subfolder !
-		# with tempfile.TemporaryDirectory() as tmpdirname:
-
-
-		# resultFilename = "./results/"+self.name+"_"+ now.month + now.day + "_" + now.hour +"_"+now.minute+".data";
+	def launch(self, fileSizes):
 
 		resultFilename = self.getResultsFilename()
 
 		logger.info("Opening file %s"%resultFilename)
-		# should truncate file
-		# f = open(resultFilename,"w+")
 
-		# range start/stop/step
-		blockSize= self.config.getint("xp","blockSize")
-		maxSize	 = self.config.getint("xp","maxFileSize")
-		max_repeat = self.config.getint("xp","repeat")
 
-		logger.info( "Using block size {0} with max size of {1}".format(blockSize,maxSize) )
 
-		fileSizes = self.generateTestFileSizes();
-		#csv.DictReader
-		# with open(resultFilename, 'w', newline='') as csvfile:
-
-		# TODO use DictWriter instead
-		# resultWriter = csv.DictWriter(csvfile,fieldnames= fileSizes , delimiter=' ',
-		# 	quotechar='|', quoting=csv.QUOTE_MINIMAL)
 		
-		# creates a 2-dimensional array 
-		results = np.empty( (max_repeat +1, len(fileSizes) ) );
-		results.fill( np.NAN )
-		results[0,] = fileSizes
-		# print("results", results )
 
+		cur = self._db_con.cursor()
 
+		for fileSize in fileSizes:
+		
 
-		# Look if there are any empty
-		# return result as a bool array.
-		#numpy.isnan(myarray).any()
-		# TODO go through the array with nenumerate looking for NaN and then filling up
-
-		# range(start,end) goes up to end - 1
-		# TODO look for NAN, compute from its position 
-		# for iteration in range(1,max_repeat + 1):
-	
-
-		# do it size by size
-		#range(blockSize, maxSize, blockSize )
-		# for no,fileSize in enumerate(fileSizes):
-
-		# TODO do it on a masked array with NaN values
-		for index,value in np.ndenumerate(results):
-			# print("index", index, "/", index[1])
-			if not np.isnan(value):
-				logger.info("Value already valid at index [%d,%d], continuing ..."%(index[0],index[1]) )
-				continue;
-
-			logger.info("Running unit test (%d ouf of %d) ..."%( index[0],max_repeat) )
-			fileSize = (index[1]+1) * blockSize
-
-			print( "webfs url",self.remotehost.getWebfsUrl())
-			fileToDownload= ""+ self.remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
+			# logger.info("Running unit test (%d ouf of %d) ..."%( index[0]) )
+			# fileSize = (index[1]+1) * blockSize
+			print( "webfs url",self._remotehost.getWebfsUrl())
+			fileToDownload= ""+ self._remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
 			# http://"+ self.remotehost.getIp()+ self.config["xp"]["files"]
+			result = self.run_unit_test(fileToDownload)
+			# TODO save result into DB
+			cur.execute("INSERT INTO results(filesize, duration) VALUES(?,?)", (fileSize, result) )
+			self._db_con.commit()
 
-			
-
-			MAX_ATTEMPT=3
-			for attempt in range(0,MAX_ATTEMPT):
-				try:
-					logger.info("Attempt %d out of %d..."%( attempt, MAX_ATTEMPT) )
-					elapsedTime = self.run_unit_test(fileToDownload)
-					# results[iteration, no] = elapsedTime
-					results[ index[0],index[1] ] = elapsedTime
-					# value = elapsedTime
-					# save intermediate results
-					self.saveResults( resultFilename, results )
-					
-					# it worked so we go to next test 
-					break;
-
-				except subprocess.CalledProcessError as e:
-					logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
-					if attempt < MAX_ATTEMPT:
-						continue;
-					else:
-						return False
-
-				# print("Results :", results )
-				# resultWriter.writerow(results)
-
-
-			# csvfile.write(" ".join(results) )
-			# csvfile.write("\n")
-			# TODO add a comment as first line
-		# np.savetxt( resultFilename, results, delimiter="," )
-		# 	# with open('some.csv', 'w', newline='') as f:
-		# 	#     writer = csv.writer(f)
-		# 	#     writer.writerows(someiterable)
-		# f.close()
 		return True;
 
 
 	#it should trace a graph at least
-	def process_results(self):
-		pass
+	# def process_results(self):
+	# 	pass
+
+
 
 
 
@@ -361,11 +333,7 @@ class TCPWithLISP(XPTest):
 		super( ).__init__( "tcpwithlisp", cfg_file,localhost, remotehost, True, False )
 		
 
-	# def prepare(self):
-	# 	self.remotehost.set_mptcp_state(False);
-	# 	self.localhost.enable()
 
-	
 
 
 
@@ -397,7 +365,7 @@ class MPTCPWithoutLISP(XPTest):
 # logging.basicConfig(format=FORMAT)
 # d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
 # logging.warning('Protocol problem: %s', 'connection reset', extra=d)
-def run_test(test_name, settings_file, localhostname, remotehostname, remoteport, simulation, *extraargs, **kwargs):
+def run_test(test_name, settings_file, localhostname, remotehostname, remoteport, simulation, resume_from_results, *extraargs, **kwargs):
 
 	# check test exists
 	logging.info("Launching test")
@@ -466,13 +434,17 @@ def run_test(test_name, settings_file, localhostname, remotehostname, remoteport
 	# settings_file
 	test = getattr( sys.modules[__name__], test_name)( config, localhost,remotehost );
 	logger.info ("Prelaunching operations");
-	if not test.prepare():
+	if not test.prepare(resume_from_results):
 		logger.error ( "failed preparing test '"+ test.name + "' ")
 		return False
 
 	# rename to run
-	if not test.launch():
-		logger.error ( "failed running test '"+ test.name + "' ")
+	# TODO generate number of keys
+	for attempt in config["xp"]["max_repeat"]:
+
+		if not test.launch():
+			logger.error ( "failed running test '"+ test.name + "' ")
+			break;
 	# test.process_results()
 
 	# TODO
@@ -514,6 +486,7 @@ if __name__ == '__main__':
 
 
 	parser.add_argument('tests', choices=["TCPWithoutLISP","TCPWithLISP","MPTCPWithLISP","MPTCPWithoutLISP"], nargs="+", help='list of tests, their ')
+	parser.add_argument('existing_results', nargs="?", help='Gives a previous file result you want to resume ')
 	# tests_parser.set_defaults(func=run_tests)
 
 
@@ -523,9 +496,11 @@ if __name__ == '__main__':
 	# args.config_file
 	# run_tests(  )
 	print("args", args)
+	resumeFile = args.existing_results if args.existing_results else None
+
 	for test_name in args.tests:
 		print("test:", test_name)
 		#args.remoteport,
 		#def run_test(test_name, settings_file, localhostname, remotehostname, remoteport, extraargs):
 
-		run_test( test_name, args.config_file, "localhost", args.remotehost, 0, simulation=args.simulate)
+		run_test( test_name, args.config_file, "localhost", args.remotehost, 0, simulation=args.simulate, resume_from_results=resumeFile)

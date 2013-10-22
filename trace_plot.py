@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import configparser
 import argparse
 import sys
+import isix.experiments.SQLiteDataSet as ds
+
 from collections import defaultdict
 
 
@@ -95,43 +97,50 @@ def drawPlot(dataFilename):
 	# TODO use numpy to load data
 	# np.array
 	# names = True reads column names from data
-	res = np.loadtxt( dataFilename, 
-					dtype=None, 
-					comments="#",
-			#, names=True
-			 		delimiter=","
-			)
+	# res = np.loadtxt( dataFilename, 
+	# 				dtype=None, 
+	# 				comments="#",
+	# 		#, names=True
+	# 		 		delimiter=","
+	# 		)
 
-	fileSizes = res[0,]
-	print("file sizes:\n", fileSizes)
-
-	res= res[1:,]
-	# print("Loaded results:\n", res)
-
-	# res.reshape( (3,3))
-	mean = res.mean()
-
-	# generate linear spaces
-	# x= res[0,]
+	# fileSizes = res[0,]
+	# print("file sizes:\n", fileSizes)
+	# res= res[1:,]
+	# mean = res.mean()
+	# avg = getAverageRowResults ( res)
+	# minValues = getLowestRowResults ( res)
+	# maxValues = getHighestRowResults ( res)
+	# errors relative to data set
+	# yerr= maxValues- avg, avg-minValues
 
 
+	res = ds.SQLiteDataSet(dataFilename) 
+	keys,minValues,maxValues,avg,rowcounts =  res.formatForHistogram()
 
-	avg = getAverageRowResults ( res)
-	minValues = getLowestRowResults ( res)
-	maxValues = getHighestRowResults ( res)
+	yerr = list(map( (lambda x, y: x-y ), maxValues, avg) )
+
+	limit = 5
+	for index, nb in enumerate(rowcounts):
+		if nb < limit:
+			print('Results are too few: ', nb , ' results for key ', keys )
+	
+
+
+
+
 
 	print("mean", avg )
 	print("min",  minValues )
 	print("high", maxValues )
 
-	# errors relative to data set
-	yerr= maxValues- avg, avg-minValues
+
 	print("Compute xerr, yerr",yerr)
 
 
 	#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)
 	p1 = plt.errorbar(
-				fileSizes,
+				keys,	# cles
 				# x, 
 				y=avg, 
 				yerr=yerr, 

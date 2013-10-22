@@ -12,7 +12,7 @@ from collections import defaultdict
 
 
 # TODO it 
-
+MINIMUM_SAMPLE_SIZE=5
 # expects a plot script and data files
 
 config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
@@ -80,7 +80,7 @@ def drawPlot(dataFilename):
 
 	limit = 5
 	for index, nb in enumerate(rowcounts):
-		if nb < limit:
+		if nb < MINIMUM_SAMPLE_SIZE:
 			print('Results are too few: ', nb , ' results for key ', keys[index] )
 	
 

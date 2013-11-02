@@ -254,18 +254,11 @@ int handle_results(struct sk_buff *skb_2, struct genl_info *info)
 
                 lig_debug("Already used port=[%d]\n", usedPort);
 			 	lig_debug("used port modulos set to [%d]\n", mpcb->used_port_modulos);
-
+                
             	ndiffports_create_subflows(meta_sk);
 
-                // 'co of the hash find'
-                // Might bug everything
-                if ( atomic_dec_and_test(&meta_sk->sk_refcnt) ) {
-                    lig_debug("That was the last holder of the socket. I should free it ");
-                }
-                else {
-                    lig_debug("Meta socket still held by others ");
-                }
-
+                // atomic_dec_and_test()
+                // a rempalcer par sock_put je crois
             }
             else
             {

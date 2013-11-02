@@ -234,7 +234,7 @@ next_subflow:
 exit:
     release_sock(meta_sk);
     mutex_unlock(&mpcb->mutex);
-    sock_put(meta_sk);
+    sock_put(meta_sk); // ptet en rajouter un 
 }
 
 static void ndiffports_new_session(struct sock *meta_sk, u8 id)

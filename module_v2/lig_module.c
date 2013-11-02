@@ -322,14 +322,6 @@ struct nlmsghdr {
          __u32           nlmsg_pid;       Sending process port ID
  };
 
-
-    // return (struct nlmsghdr *)((char *)user_hdr -
-    //                family->hdrsize -
-    //                GENL_HDRLEN -
-    //                NLMSG_HDRLEN);
-
-
-
     struct nlattr {
             __u16           nla_len;
             __u16           nla_type;

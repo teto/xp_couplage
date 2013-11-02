@@ -23,6 +23,7 @@ You first need to properly configure the *.ini files.
 Then launch setup.py
 
  sudo pip3 install pyro4
+ sudo pip3 install pyyaml
 
 Pyro_server should be launched by hand.
 

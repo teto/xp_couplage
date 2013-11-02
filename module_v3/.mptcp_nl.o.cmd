@@ -1,0 +1,1 @@
+cmd_/home/teto/xp_couplage/module_v3/mptcp_nl.o := ld -m elf_x86_64   -r -o /home/teto/xp_couplage/module_v3/mptcp_nl.o /home/teto/xp_couplage/module_v3/mptcp_nl_simple.o /home/teto/xp_couplage/module_v3/mptcp_netlink.o 

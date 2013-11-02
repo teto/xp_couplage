@@ -131,7 +131,7 @@ plots = defaultdict(dict)
 # for plot in plots:
 # 	plot = dict.fromkeys(["graph" ,"legend" ])
 
-
+# TODO from these args, use a function  called loadDataSet
 for plotName in plotNames:
 	plots[plotName]["graph"]  = drawPlot( getattr(args,plotName) )
 	# plots[plotName][0]  = drawPlot( getattr(args,plotName) )

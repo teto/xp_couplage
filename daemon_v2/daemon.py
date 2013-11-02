@@ -18,7 +18,7 @@ logger = logging.getLogger( __name__ )
 logger.setLevel( logging.DEBUG )
 # logger= logging
 # print ("handlers", logger.handlers )
-
+# TODO improve formatter
 handler = logging.StreamHandler()
 #logging.FileHandler('hello.log')
 handler.setLevel(logging.DEBUG)
@@ -53,7 +53,9 @@ logger.debug("Starting LIG DAEMON\n");
 
 
 def sigint_handler(signum, frame):
-	print( 'Stop pressing the CTRL+C!' )
+	print( 'ignal received !' )
+	sys.exit(1)
+	# TODO close socket, drop membership
 
 
 
@@ -96,10 +98,13 @@ class LigDaemon:
 		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_FINISH, nl.NL_CB_VERBOSE, finish_handler, self);
 		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_ACK, nl.NL_CB_VERBOSE, ack_handler, self);
 		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_VALID, nl.NL_CB_CUSTOM, msg_handler, self);
-		# nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_VALID, nl.NL_CB_CUSTOM, self.handle, None);
+		# nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_VALID, nl.NL_CB_CUSTOM, self.handle, self);
+		nl.py_nl_cb_set(self.rx_cb, nl.NL_CB_INVALID, nl.NL_CB_DEBUG, None, None);
 
 		# Notifications do not use sequence numbers, disable sequence number checking.
-		nl.nl_socket_disable_seq_check(self.sk);
+		# nl.nl_socket_disable_seq_check(self.sk);
+
+		# MANDATORY because of a bug in netlink that sends -NLE_SEQ_MISMATCH otherwise
 		nl.nl_socket_disable_auto_ack(self.sk);
 
 		# establish connection
@@ -143,10 +148,12 @@ class LigDaemon:
 	# send it into antoehr thread ?
 	def send_rlocs_list_for_eid(self, seq_nb, token, nb_of_rlocs):
 		logger.info("Sending rlocs nb of '%d' for token %d with seq nb %d"%(nb_of_rlocs,token,seq_nb))
+		
+		# Remplacer ca par la classe Netlink associée
 		msg = nl.nlmsg_alloc()
 
 		# returns void*
-		genl.genlmsg_put(msg,
+		msg_header = genl.genlmsg_put(msg,
 						0, # port
 						0, # seq nb
 						self.family_id, # family_id
@@ -155,9 +162,17 @@ class LigDaemon:
 						ELC_RESULTS, 	 # cmd
 						LIG_GENL_VERSION # version
 						)
+		if not msg_header:
+			logger.error("Could not create header")
+			return False
 
-		nl.nla_put_u32(msg, ELA_RLOCS_NUMBER, nb_of_rlocs );
+
+		
 		nl.nla_put_u32(msg, ELA_MPTCP_TOKEN , token );
+		nl.nla_put_u8(msg, ELA_RLOCS_NUMBER, nb_of_rlocs );
+
+		logger.debug("sEnding autocomplete")
+		# rc = genlmsg_end(skb, msg_header);
 
 		err = nl.nl_send_auto_complete(self.sk, msg);
 		if err < 0:
@@ -165,7 +180,8 @@ class LigDaemon:
 			nl.nlmsg_free(msg)
 			return False
 
-		nl.nlmsg_free(msg)
+		# nl.nlmsg_free(msg)
+		logger.debug("Message successfully sent")
 		return True
 
 
@@ -178,13 +194,13 @@ class LigDaemon:
 			err = nl.nl_recvmsgs(self.sk, self.rx_cb)
 			# err = nl.nl_recvmsgs_default(self.sk)
 			if err < 0:
-				logger.error( "Error for nl_recvmsgs: %d: %s"% (err, nl.nl_geterror(err)) )
+				logger.error( "In nl_recvmsgs: %d: %s"% (err, nl.nl_geterror(err)) )
 				break;
 
 
 	def retrieve_number_of_rlocs(self,eid):
 
-		print("retrieve_number_of_rlocs")
+		logger.debug("retrieve_number_of_rlocs")
 		# if in simulation mode, always return the same answer
 		if self.simulate:
 			logger.info("Simulation mode returning %d for eid %s"%(self.simulate, eid) )
@@ -193,12 +209,13 @@ class LigDaemon:
 
 
 		try:
+			logger.info("Asking mapresolver")
 			#number_of_rlocs=$(lig -m $mapresolver $eid 2>&1 | grep -c up)
 			#PATH_TOWARDS_PROGRAM
 			cmd= self.lig_program + " -m " + self.mapresolver + eid +" 2>&1" + "| grep -c up" 
 			# args = [ self.lig_program,"-m", self.mapresolver, eid , "2>&1" ]
 			output = subprocess.check_output( cmd , shell=True);
-			print( "Result: ", output.decode() )
+			print( "Result : ", output.decode() )
 			return int( output.decode() );
 		except  subprocess.CalledProcessError as e:
 			logger.error("Could not retrieve the correct number of rlocs. Return code: %d"%e.returncode)
@@ -207,24 +224,29 @@ class LigDaemon:
 
 	def handle(self, m):
 
-		print("Hello world from ember function");
+		print("Hello world from member function");
 		logger.debug("Handle Msg from class")
-
+		print("m",m)
 		try:
+			logger.debug("getting msg header")
 			nlmsghdr = nl.nlmsg_hdr(m)
-			print("nlmsghdr: flags:", nlmsghdr.nlmsg_flags , "seq:", nlmsghdr.nlmsg_seq )
-
+			# print("nlmsghdr: flags:", nlmsghdr.nlmsg_flags , "seq:", nlmsghdr.nlmsg_seq )
+			logger.debug("getting genlmsg header")
 			genlhdr = genl.genlmsg_hdr( nlmsghdr )
+
+			# logger.debug("Generic Command", genlhdr.cmd)
+
 			if not genlhdr:
 				logger.error("Could not get generic header")
 				return nl.NL_STOP
+
 
 			if genlhdr.cmd == ELC_REQUEST_RLOCS_FOR_EID:
 				logger.info("Request RLOC for an EID")
 
 				
 				# attrs = None
-				print("Message handler got called");
+				# print("Message handler got called");
 				err, attrs = genl.py_genlmsg_parse(
 						nlmsghdr, 
 						0, # will be returned as an attribute
@@ -239,13 +261,13 @@ class LigDaemon:
 
 				logger.info("Looking for ELA")
 				if ELA_EID in attrs:
-					print ("hello", attrs[ELA_EID])
+					# logger.debug ("hello", attrs[ELA_EID])
 					eid 	= nl.nla_get_u32(attrs[ELA_EID]);
-					print ("eid", eid)
+					# logger.info ("eid", eid)
 
-					print ("token", attrs[ELA_MPTCP_TOKEN])
+					# logger.debug ("token", attrs[ELA_MPTCP_TOKEN])
 					token 	= nl.nla_get_u32(attrs[ELA_MPTCP_TOKEN]);
-					print("token", token)
+					# logger.info("token", token)
 
 					# print("Requested EID ",eid, " for token ",binascii.hexlify( token ))
 
@@ -309,14 +331,14 @@ def msg_handler(m, arg):
 	# print ( dir (arg) )
 	arg.handle(m)
 	# return nl.NL_OK
-	return nl.NL_SKIP 
+	return nl.NL_STOP
 
 ###############################
 ###############################
 ## TO TEST LIBNL (remove later)
 ###############################
-# msg_handler = "hello world"
-# ack_handler = None
+#msg_handler = "hello world"
+#ack_handler = None
 
 if __name__ == '__main__':
 

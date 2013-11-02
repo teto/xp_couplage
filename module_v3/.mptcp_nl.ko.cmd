@@ -1,0 +1,1 @@
+cmd_/home/teto/xp_couplage/module_v3/mptcp_nl.ko := ld -r -m elf_x86_64 -T /home/teto/mptcp88/scripts/module-common.lds --build-id  -o /home/teto/xp_couplage/module_v3/mptcp_nl.ko /home/teto/xp_couplage/module_v3/mptcp_nl.o /home/teto/xp_couplage/module_v3/mptcp_nl.mod.o

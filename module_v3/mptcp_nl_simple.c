@@ -234,6 +234,7 @@ next_subflow:
 exit:
     release_sock(meta_sk);
     mutex_unlock(&mpcb->mutex);
+    lig_debug("Ref count on meta sk before sock_put [%d]\n",meta_sk->sk_refcnt.counter);
     sock_put(meta_sk); // ptet en rajouter un 
 }
 
@@ -259,7 +260,9 @@ void ndiffports_create_subflows(struct sock *meta_sk)
         return;
 
     if (!work_pending(&pm_priv->subflow_work)) {
-        sock_hold(meta_sk);
+        // Plu besoin de ca puiqu'on a deja capture le truc via
+        // mptcp_find_hash
+        //sock_hold(meta_sk);
 
         queue_work(mptcp_wq, &pm_priv->subflow_work);
     }

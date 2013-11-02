@@ -150,7 +150,7 @@ lig_debug( "sending request to userspace for eid %u.%u.%u.%u and token %#x \n", 
 
         }
         // TODO may be error here maybe it is free by genlmsg_multicast ?
-        nlmsg_free(skb);
+        //nlmsg_free(skb);
         return;
     }
     lig_debug( "Successfully multicasted\n");
@@ -227,8 +227,9 @@ int handle_results(struct sk_buff *skb_2, struct genl_info *info)
                 // }
             	
                 // Here we should have a better optimiation
+
                 meta_sk = mptcp_hash_find( 0, token );
-                // lig_debug("Ref count on meta sk [%d]\n",meta_sk->sk_refcnt);
+                lig_debug("Ref count on meta sk after hash_find [%d]\n",meta_sk->sk_refcnt.counter);
             	
 
                 if(!meta_sk){
@@ -254,7 +255,7 @@ int handle_results(struct sk_buff *skb_2, struct genl_info *info)
 
                 lig_debug("Already used port=[%d]\n", usedPort);
 			 	lig_debug("used port modulos set to [%d]\n", mpcb->used_port_modulos);
-                
+
             	ndiffports_create_subflows(meta_sk);
 
                 // atomic_dec_and_test()

@@ -6,6 +6,10 @@ import configparser
 import argparse
 import sys
 import os
+import netlink as nl
+import netlink.route.link as nl_link
+import netlink.route.address as nl_addr
+
 # import inspect
 import subprocess
 
@@ -26,7 +30,18 @@ logger = logging.getLogger( "isix" )
 logger.setLevel(logging.DEBUG)
 
 
+def getInterfaceIP(if_name):
+	# eth = nl_link.get(if_name)
+	# print( eth )
 
+	cache = nl_addr.AddressCache()
+	cache.refill()
+
+	for addr in cache:
+	    if addr.label == "lispTun0":
+	        return (addr.local)
+
+	return None
 
 
 # en fait pourl'instant cette commande on s'en moque
@@ -53,12 +68,22 @@ class Host:
 	# def __enter__(self):
 	# def __exit__(self):
 
-	# TODO check
+	# TODO use LIBnl
 	def getEID(self):
+		if_name = "lispTun0"
+		addr = getInterfaceIP( if_name )
+		# tun = nl_link.get(if_name)
+
+		if not addr:
+			logger.debug("Could not retrieve link for interface [%s]"%if_name)
+			return self.getIp()	
+
+		return addr
 		# if self.router.is_running():
 			# return self.config["network"]["eid"]
-		return self.getIp()
+		
 
+	# Don't use it.
 	def getRLOC(self):
 		# if not self.router.is_running():
 		return self.getIp()

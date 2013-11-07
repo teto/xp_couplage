@@ -7,12 +7,17 @@ import configparser
 import argparse
 import sys
 import isix.experiments.SQLiteDataSet as ds
+import logging
 
 from collections import defaultdict
 
 
+logger = logging.getLogger()
+logger.setLevel( logging.DEBUG )
+
+
 # TODO it 
-MINIMUM_SAMPLE_SIZE=5
+MINIMUM_SAMPLE_SIZE=0
 # expects a plot script and data files
 
 config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation() )
@@ -60,53 +65,73 @@ for plotName in plotNames:
 args = parser.parse_args( sys.argv[1:] )
 
 
+# def drawErrorPlot( dataFilename ):
+# 	pass
 
 
 
+def drawBoxPlot(dataFilename):
 
-
-
-def drawPlot(dataFilename):
-
-	# TODO need to get 
-	print("Drawing plot for dataset ", dataFilename)
-
-
+	logger.info("Drawing error plot for dataset ", dataFilename)
 
 	res = ds.SQLiteDataSet(dataFilename) 
-	keys,minValues,maxValues,avg,rowcounts =  res.formatForHistogram()
 
+	keys,durations =  res.formatForPlotbox()
+
+	locs, labels = plt.xticks() 
+	# concatenate
+	p1 = plt.boxplot(
+		durations
+		# ,notch=True
+		#,positions=keys
+		)
+
+	# plt.xticks(keys)
+	# plt.xticks(locs)
+
+	return p1
+
+
+def drawErrorPlot(dataFilename):
+
+	# TODO need to get 
+	logger.info("Drawing error plot for dataset ", dataFilename)
+
+	res = ds.SQLiteDataSet(dataFilename) 
+
+	keys,minValues,maxValues,avg,rowcounts =  res.formatForHistogram()
+	
+	
 	yerr = list(map( (lambda x, y: x-y ), maxValues, avg) )
 
 	limit = 5
 	for index, nb in enumerate(rowcounts):
 		if nb < MINIMUM_SAMPLE_SIZE:
 			print('Results are too few: ', nb , ' results for key ', keys[index] )
-	
-
-
-
-
 
 	# print("mean", avg )
 	# print("min",  minValues )
 	# print("high", maxValues )
-
-
 	# print("Compute xerr, yerr",yerr)
 
-
 	#x, y, yerr=None, xerr=None, fmt='-', ecolor=None, elinewidth=None, capsize=3, barsabove=False, lolims=False, uplims=False, xlolims=False, xuplims=False, errorevery=1, capthick=None, hold=None, **kwargs)
+	format=config[plotName].get("format",'o')
+	print("format:", format)
 	p1 = plt.errorbar(
 				keys,	# cles
-				# x, 
 				y=avg, 
 				yerr=yerr, 
-				label = config[plotName]["legend"]
+				label = config[plotName]["legend"],
+				linewidth=config[plotName].get("linewidth",3), 
+				linestyle= config[plotName].get("linestyle","--"),
+				fmt=format,
+				markersize= config[plotName].getfloat("ms",6.)
+				,capthick=config[plotName].getint("capthick",1)
+				
 	# 			xerr=None, 
-	# 			fmt='-', 
+				# fmt='-', 
 	# 			ecolor=None, 
-	# 			elinewidth=None, 
+				
 	# 			capsize=3, 
 	# 			barsabove=False, 
 	# 			lolims=False, 
@@ -115,25 +140,38 @@ def drawPlot(dataFilename):
 	# 			xuplims=False, 
 	# 			errorevery=1, 
 	# 			capthick=None, 
-	# 			hold=None, 
+				,hold=True 
 	# 			#**kwargs
 				)
+	# plt.draw()
 	return p1
 
+
+
+plotTypes = {
+"error" : drawErrorPlot,
+"box" : drawBoxPlot
+
+}
+
+# fig = plt.figure()
+# ax1 = fig.add_subplot(111)
 # numpy.linspace(start, stop, num=50, endpoint=True, retstep=False)
 
 # linewidth=2.0,names=("lol","plop")
 
 
 print("names",plotNames)
+print("types ",plotTypes)
 plots = dict.fromkeys( plotNames)
 plots = defaultdict(dict)
 # for plot in plots:
 # 	plot = dict.fromkeys(["graph" ,"legend" ])
-
+# hold on;
 # TODO from these args, use a function  called loadDataSet
 for plotName in plotNames:
-	plots[plotName]["graph"]  = drawPlot( getattr(args,plotName) )
+	print( config[plotName].get("type","error") )
+	plots[plotName]["graph"]  = plotTypes[ config[plotName].get("type","error") ]( getattr(args,plotName) )
 	# plots[plotName][0]  = drawPlot( getattr(args,plotName) )
 	plots[plotName]["legend"] = config[plotName]["legend"]
 
@@ -145,17 +183,16 @@ for plotName in plotNames:
 
 
 # plt.title("Mon titre")
-plt.title(config["general"]["title"])
-# plt.xticks( fileSizes)
-# plt.yticks()
-plt.xlabel("hello world")
-plt.xlabel(config["general"]["xlabel"])
-plt.ylabel(config["general"]["ylabel"])
+# plt.title(config["general"]["title"], fontsize=30)
+plt.xticks( fontsize=26)
+plt.yticks(fontsize=26)
+plt.xlabel(config["general"]["xlabel"], fontsize=28)
+plt.ylabel(config["general"]["ylabel"], fontsize=28)
 
-plt.legend(loc='upper left')
+plt.legend(loc='upper left', fontsize=28)
+# ax1.figure.show()
+# plt.tight_layout()
 plt.show()
-
-
 
 
 

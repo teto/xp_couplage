@@ -212,11 +212,13 @@ class LigDaemon:
 			logger.info("Asking mapresolver")
 			#number_of_rlocs=$(lig -m $mapresolver $eid 2>&1 | grep -c up)
 			#PATH_TOWARDS_PROGRAM
-			cmd= self.lig_program + " -m " + self.mapresolver + eid +" 2>&1" + "| grep -c up" 
+			cmd= self.lig_program + " -m " + self.mapresolver + " " + eid +" 2>&1" + "| grep -c up" 
 			# args = [ self.lig_program,"-m", self.mapresolver, eid , "2>&1" ]
-			output = subprocess.check_output( cmd , shell=True);
-			print( "Result : ", output.decode() )
-			return int( output.decode() );
+			logger.info("Launching command [%s]"%cmd)
+			output = subprocess.check_output( cmd , shell=True).decode();
+			logger.info( "Result : %s"% output )
+			return int( output );
+
 		except  subprocess.CalledProcessError as e:
 			logger.error("Could not retrieve the correct number of rlocs. Return code: %d"%e.returncode)
 			return -1
@@ -224,7 +226,7 @@ class LigDaemon:
 
 	def handle(self, m):
 
-		print("Hello world from member function");
+
 		logger.debug("Handle Msg from class")
 		print("m",m)
 		try:

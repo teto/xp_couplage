@@ -61,8 +61,8 @@ int handle_results(struct sk_buff *skb_2, struct genl_info *info);
 static int mptcp_get_port_modulo_n(int desired_port_rest_after_modulo, int modulo)
 {
     int lowest_possible_port = 0, highest_possible_port = 0;
-    int remaining = 0;
-    int rover = 0;
+    uint16_t remaining = 0;
+    uint16_t rover = 0;
 
     mptcp_debug("Looking for a port number with rest after modulo [%d] of [%d] (rest)\n", modulo,desired_port_rest_after_modulo);
 
@@ -211,9 +211,9 @@ next_subflow:
             // TODO generer le port a partir du desired_number_of_subflows > mpcb->cnt_subflows
             // ajouter la fct de génération du port
             // Generate a good port number
-            loc.port = mptcp_get_port_modulo_n( desired_port_modulo , desired_number_of_subflows);
+            loc.port = htons( mptcp_get_port_modulo_n( desired_port_modulo , desired_number_of_subflows) );
             // lig_debug("Attempting connection towards  ");
-
+            // TODO in the server case I do not want to init the socket but rather to advertise
             mptcp_init4_subsockets(meta_sk, &loc, &mpcb->remaddr4[0]);
         } else {
 
@@ -278,6 +278,9 @@ static struct mptcp_pm_ops ndiffports __read_mostly = {
     .new_session = ndiffports_new_session,
     .fully_established = on_session_establishment,  // ndiffports_create_subflows
     .get_local_id = ndiffports_get_local_id,
+    // .addr_signal
+    // .new_remote_address
+
     .name = "netlink",
     .owner = THIS_MODULE,
 };

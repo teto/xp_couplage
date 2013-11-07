@@ -22,6 +22,7 @@ import isix.host as host
 import isix.experiments.SQLiteDataSet as sqlite_ds
 import sqlite3 as db
 import itertools
+import time
 
 # timeout before locateNS failure 
 Pyro4.config.COMMTIMEOUT = 3
@@ -132,7 +133,7 @@ class XPTest:
 		now = datetime.datetime.now()
 		#%Y for year , %H for hour (24h), %M for padded minute
 		# rename into numpy format ?
-		resultFilename = now.strftime(MainDir+"/results/"+self._name+"_%d%m_%H%M.csv")
+		resultFilename = now.strftime(MainDir+"/results/"+self._name+"_%d%b_%Hh%Mm.sqlite")
 
 		return resultFilename
 
@@ -176,7 +177,8 @@ class XPTest:
 		print ("temp", temp)
 		print ("block size ", self._blockSize)
 		for size in temp:
-			res = subprocess.call(["dd","if=/dev/urandom" ,
+			res = subprocess.call(["dd",
+						"if=/dev/urandom" ,
 						"of={folder}/{fileSize}.bin".format(folder=filesFolder, fileSize=size),
 						# "bs=\"%dk\""%blockSize,
 						"bs=%dk"%self._blockSize,
@@ -263,8 +265,10 @@ class XPTest:
 	# return elapsed time
 	def run_unit_test(self, fileToDownload):
 
-		logger.info("Downloading file %s", fileToDownload)
+		logger.info("Downloading file [%s]", fileToDownload)
 		
+		addressToBindTo=self._localhost.getEID()
+
 		MAX_ATTEMPT=3
 		for attempt in range(1,MAX_ATTEMPT):
 			try:
@@ -273,11 +277,15 @@ class XPTest:
 				#/usr/bin/time -f '%e' wget -q -O /dev/null http://192.168.1.102:8000/xpfiles/1920.bin
 				# be careful
 				# time utility sends its output on stderr by default
-				time = subprocess.check_output(
+				# TODO afficher la commande en mode debug
+				# via string puis split[] ?
+				logger.debug("Command [%s]"%"wget TODO")
+				elapsedTime = subprocess.check_output(
 					["/usr/bin/time", 
 					"-f", # to specify format
 					"%e" , # elapsed time
 					"wget",
+					"--bind-address=%s"%addressToBindTo,
 					"--tries",
 					"1",
 					"--timeout",
@@ -292,16 +300,18 @@ class XPTest:
 					stderr=subprocess.STDOUT
 					);
 				# append exection time.decode()
-				elapsedTime = time.decode().rstrip()
-				print("Result %s"% elapsedTime )
+				elapsedTime = elapsedTime.decode().rstrip()
+				logger.info("Result %s"% elapsedTime )
 				
 				return ( elapsedTime )
 				# it worked so we go to next test 
 				break;
 
 			except subprocess.CalledProcessError as e:
-				logger.error("Error on attempt %d %d %s"%(attempt,e.returncode,e.output) );
+				logger.error("Error on attempt [%d]. Error Code [%d].\nCommand [%s]\n returned [%s]\n . "%(attempt,e.returncode,e.cmd,e.output) );
 				if attempt < MAX_ATTEMPT:
+					logger.info("Sleep for 2 seconds")
+					time.sleep(5)
 					continue;
 				else:
 					return False
@@ -326,7 +336,7 @@ class XPTest:
 		# cur = self._db_con.cursor()
 		for fileSize, count in self._fileSizes.items():
 			
-			
+			# TODO selon lisp activé ou non, on prend l'EID ou l'IP 
 			fileToDownload= ""+ self._remotehost.getWebfsUrl() +"/xpfiles/"+str(fileSize)+".bin";
 
 			print( "[%d] iterations needed to complete results for the size [%d]"%(count, fileSize ) )
@@ -340,6 +350,8 @@ class XPTest:
 
 				self._db.addResult( fileSize, result )
 
+
+		print("Results saved in [%s]"% resultFilename)
 		return True;
 
 

@@ -9,6 +9,7 @@ logger = logging.getLogger()
 
 
 # should be a minimum number of keys
+# TODO add adapters
 class SQLiteDataSet(mgr.FileDownloadData):
 
     def __init__(self, filename):
@@ -97,7 +98,44 @@ class SQLiteDataSet(mgr.FileDownloadData):
         # self._cur.execute( "SELECT AVG(duration) FROM results WHERE filesize=?", filesize)
 
 
+
+    def formatForPlotbox(self):
+        """
+
+        """
+
+        keys = []
+        durations = []
+        rowcounts = []
+        self._cur.execute( "SELECT filesize FROM results GROUP BY filesize " )
+        # keys = self._cur.fetchall()
+        # print("keys", keys)
+        for i in self._cur:
+            print("key", i[0] )
+            keys.append( i[0])
+
+        # where Id in 
+        for key in keys:
+            self._cur.execute( "SELECT duration FROM results WHERE filesize=?", (key,) )
+            durationsPerKey = []
+            for i in self._cur:
+                
+                print("duration(s) ?:", i[0] )
+                if i[0] != None:
+                # print("count", i[2] )
+                
+                    durationsPerKey.append( i[0] )
+                # rowcounts.append( i[2] )
+
+            durations.append( durationsPerKey )
+
+        print("Durations", durations )
+        return keys, durations
+
     def formatForHistogram(self):
+        """
+
+        """
         keys = []
         minima = []
         maxima = []
@@ -106,8 +144,10 @@ class SQLiteDataSet(mgr.FileDownloadData):
 
         self._cur.execute( "SELECT filesize,AVG(duration),min(duration),max(duration),count(*) FROM results GROUP BY filesize " )
         
+        # TODO replace by self._cur.fetchall()  ?
+
         for i in self._cur:
-            print("keys")
+            # print("keys")
             keys.append( i[0])
             avg.append( i[1])
             minima.append( i[2])

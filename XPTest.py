@@ -33,26 +33,6 @@ logger.setLevel(logging.DEBUG)
 MainDir = os.path.realpath( os.path.dirname( __file__ ))
 
 
-# TODO replace with external libraries such as Fabric or paramiko or spur etc...
-# ServerAliveInterval X sends information every X sec to keep the connection alive
-# ServerAliveCountMax X tells the client to kill the connection after X timeouts
-# port might be optional ? , port
-# host can be 127.0.0.1
-def do_ssh(host, cmd):
-	# TODO retrieve return value
-    #return os.system("ssh -/o ServerAliveInterval=10 -o ServerAliveCountMax=2 -p "+port+" root@127.0.0.1 \""+cmd+"\"")
-    output = subprocess.check_output("ssh -o ServerAliveInterval=10 root@"+host+" \""+cmd+"\"; echo $?")
-    return output 
-
-def do_ssh_back(host, cmd):
-    #return os.system("ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=2 -p "+port+" root@127.0.0.1 "+cmd)
-    return os.system("ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=2 root@"+host+" "+cmd +" echo $?")
-
-
-# used to download files
-def do_scp(host, rem, loc):
-	return os.system("scp root@"+host+":"+rem+" "+loc)
-
 
 
 def check_for_folder(dirname):
